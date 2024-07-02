@@ -1,0 +1,42 @@
+name: Call rundeck job and notify
+description: Call a rundeck job and notify on Mattermost
+inputs:
+  RUNDECK_URL:
+    description: 'URL of the Rundeck server'
+    required: true
+  RUNDECK_TOKEN:
+    description: 'Auth token to call Rundeck job'
+    required: true
+  RUNDECK_JOB_ID:
+    description: 'ID of the Rundeck job to call'
+    required: true
+  MATTERMOST_WEBHOOK_URL:
+    description: 'Webhook URL to send notifications on Mattermost'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Install curl
+      run: sudo apt-get update && sudo apt-get install -y curl
+      shell: bash
+    - name: Call Rundeck job
+      run: |
+        curl -i -X POST -H "X-Rundeck-Auth-Token: ${{ inputs.RUNDECK_TOKEN }}" ${{ inputs.RUNDECK_URL }}/api/18/job/${{ inputs.RUNDECK_JOB_ID }}/run/
+      shell: bash
+    - name : Send notification on Mattermost
+      env:
+        RUNDECK_JOB_ID: ${{ inputs.RUNDECK_JOB_ID }}
+      run: |
+        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        MESSAGE="rundeck job $RUNDECK_JOB_ID has been successfully called . [Click here to see job on GitHub]($JOB_URL) "
+        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+      shell: bash
+    - name : Send failure notification on Mattermost
+      if: ${{ failure() }}
+      env:
+        RUNDECK_JOB_ID: ${{ inputs.RUNDECK_JOB_ID }}
+      run: |
+        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        MESSAGE="Error : cannot call rundeck job $RUNDECK_JOB_ID. [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+      shell: bash
