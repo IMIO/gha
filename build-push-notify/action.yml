@@ -1,0 +1,87 @@
+name: Update image in registry
+description: Build and push image to registry and notify on Mattermost
+inputs:
+  IMAGE_NAME:
+    description: 'Name of the image to build and push'
+    required: true
+  IMAGE_TAG:
+    description: 'Tag of the image to build and push'
+    required: true
+    default: 'latest'
+  REGISTRY_URL:
+    description: 'URL of the registry'
+    required: true
+  REGISTRY_USERNAME:
+    description: 'Username to login to registry'
+    required: true
+  REGISTRY_PASSWORD:
+    description: 'Password to login to registry'
+    required: true
+  MATTERMOST_WEBHOOK_URL:
+    description: 'Webhook URL to send notifications on Mattermost'
+    required: true
+  PLATFORMS:
+    description: 'Platforms to build the image for'
+    required: true
+    default: 'linux/amd64'
+  CONTEXT:
+    description: 'Path to the Dockerfile'
+    required: true
+    default: './'
+  DOCKERFILE:
+    description: 'Name of the Dockerfile'
+    required: true
+    default: 'Dockerfile'
+  BUILD_ARGS:
+    description: 'Build arguments to pass to the Dockerfile'
+    required: true
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Install curl
+      run: sudo apt-get update && sudo apt-get install -y curl
+      shell: bash
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+    - name: Login to registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.REGISTRY_URL }}
+        username: ${{ inputs.REGISTRY_USERNAME }}
+        password: ${{ inputs.REGISTRY_PASSWORD }}
+    - name: Build
+      uses: docker/build-push-action@v6.2.0
+      with:
+        context: ${{ inputs.CONTEXT }}
+        file: ${{ inputs.DOCKERFILE }}
+        tags: |
+          ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.IMAGE_TAG }}
+          ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.IMAGE_TAG }}-${{ github.run_number }}
+        platforms: ${{ inputs.PLATFORMS }}
+        pull: true
+        push: true
+        build-args: ${{ inputs.BUILD_ARGS }}
+    - name : Send notification on Mattermost
+      env:
+        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
+        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+      run: |
+        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        MESSAGE="docker image $IMAGE_NAME:$IMAGE_TAG has been updated on registry. [Click here to see job on GitHub]($JOB_URL) "
+        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+      shell: bash
+    - name : Send failure notification on Mattermost
+      if: ${{ failure() }}
+      env:
+        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
+        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+      run: |
+        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        MESSAGE="Error : docker image  $IMAGE_NAME:$IMAGE_TAG has not been updated on registry. [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+      shell: bash
