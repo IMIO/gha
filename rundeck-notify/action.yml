@@ -13,6 +13,10 @@ inputs:
   MATTERMOST_WEBHOOK_URL:
     description: 'Webhook URL to send notifications on Mattermost'
     required: true
+  RUNDECK_PARAMETERS:
+    description: 'Parameters to pass to the Rundeck job'
+    required: false
+    default: ''
 runs:
   using: 'composite'
   steps:
@@ -29,7 +33,7 @@ runs:
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
         MESSAGE="rundeck job $RUNDECK_JOB_ID has been successfully called . [Click here to see job on GitHub]($JOB_URL) "
-        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        curl -i -X POST -H 'Content-Type: application/json' ${{ inputs.RUNDECK_PARAMETERS }} -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
       if: ${{ failure() }}
