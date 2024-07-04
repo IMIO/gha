@@ -2,11 +2,11 @@
 
 github actions we use to deploy our apps
 
-### build-push-notify
+## build-push-notify
 
 build/push a docker image using docker/build-push-action and notify via a mattermost webhook
 
-#### Inputs
+### Inputs
 
 | name                   | required | type   | default         | description |
 | ---------------------- | -------- | ------ | --------------- | ----------- |
@@ -22,11 +22,11 @@ build/push a docker image using docker/build-push-action and notify via a matter
 | BUILD_ARGS             |    yes   | string | `""`            | Build arguments to pass to the Dockerfile
 
 
-### rundeck-notify
+## rundeck-notify
 
 call a rundeck job and notify via a mattermost webhook
 
-#### Inputs
+### Inputs
 
 | name                   | required | type   | default         | description |
 | ---------------------- | -------- | ------ | --------------- | ----------- |
@@ -36,11 +36,11 @@ call a rundeck job and notify via a mattermost webhook
 | RUNDECK_PARAMETERS     |    no    | string |                 | Parameters to pass to the Rundeck job
 | MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost
 
-### tag-notify
+## tag-notify
 
 tag a docker image and notify via a mattermost webhook
 
-#### Inputs
+### Inputs
 
 | name                   | required | type   | default         | description |
 | ---------------------- | -------- | ------ | --------------- | ----------- |
