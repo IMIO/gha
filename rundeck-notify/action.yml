@@ -25,7 +25,7 @@ runs:
       shell: bash
     - name: Call Rundeck job
       run: |
-        curl -i ${{ inputs.RUNDECK_PARAMETERS }} -H "X-Rundeck-Auth-Token: ${{ inputs.RUNDECK_TOKEN }}" ${{ inputs.RUNDECK_URL }}/api/18/job/${{ inputs.RUNDECK_JOB_ID }}/run/
+        curl -i --fail-with-body ${{ inputs.RUNDECK_PARAMETERS }} -H "X-Rundeck-Auth-Token: ${{ inputs.RUNDECK_TOKEN }}" ${{ inputs.RUNDECK_URL }}/api/18/job/${{ inputs.RUNDECK_JOB_ID }}/run/
       shell: bash
     - name : Send notification on Mattermost
       env:
