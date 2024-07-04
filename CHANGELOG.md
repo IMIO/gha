@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [1.0.1] - 2024-07-04
 ### Fixed
 #### rundeck-notify
 - Fail when http status code != 200
