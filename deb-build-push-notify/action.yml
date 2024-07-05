@@ -56,7 +56,7 @@ runs:
           -t deb
           -v ${{ inputs.PACKAGE_VERSION }}
           --python-install-lib ${{ inputs.PACKAGE_INSTALL_PATH }}
-          -d {{ inputs.PACKAGE_DEPENDENCY }}
+          -d ${{ inputs.PACKAGE_DEPENDENCY }}
           --no-auto-depends
           setup.py
       shell: bash
