@@ -63,7 +63,7 @@ runs:
     - name: 'Sign package'
       run: |
         dpkg-sig \
-        -g "--pinentry-mode loopback --no-tty --yes --batch --passphrase ${{ inputs.SIGNER_PASSPHRASE }}" \
+        -g "--pinentry-mode loopback --no-tty --yes --batch --passphrase '${{ inputs.SIGNER_PASSPHRASE }}' " \
         -s builder \
         -k ${{ inputs.SIGNER_KEY }} ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb
       shell: bash
