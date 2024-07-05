@@ -47,32 +47,32 @@ runs:
       shell: bash
     - name: 'Build package'
       run: |
-        fpm -a amd64
-          --python-bin python3
-          --python-pip pip3
-          --python-package-name-prefix python3
-          -n ${{ inputs.PACKAGE_NAME }}
-          -s python
-          -t deb
-          -v ${{ inputs.PACKAGE_VERSION }}
-          --python-install-lib ${{ inputs.PACKAGE_INSTALL_PATH }}
-          -d ${{ inputs.PACKAGE_DEPENDENCY }}
-          --no-auto-depends
+        fpm -a amd64 \
+          --python-bin python3 \
+          --python-pip pip3 \
+          --python-package-name-prefix python3 \
+          -n ${{ inputs.PACKAGE_NAME }} \
+          -s python \
+          -t deb \
+          -v ${{ inputs.PACKAGE_VERSION }} \
+          --python-install-lib ${{ inputs.PACKAGE_INSTALL_PATH }} \
+          -d ${{ inputs.PACKAGE_DEPENDENCY }} \
+          --no-auto-depends \
           setup.py
       shell: bash
     - name: 'Sign package'
       run: |
-        dpkg-sig
-        -g "--pinentry-mode loopback --no-tty --yes --batch --passphrase ${{ inputs.SIGNER_PASSPHRASE }}"
-        -s builder
+        dpkg-sig \
+        -g "--pinentry-mode loopback --no-tty --yes --batch --passphrase ${{ inputs.SIGNER_PASSPHRASE }}" \
+        -s builder \
         -k ${{ inputs.SIGNER_KEY }} ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb
       shell: bash
     - name: 'Upload package'
       run: |
-        curl
-          -vk --fail -X POST -H Content-Type:multipart/form-data
-          -u ${{ inputs.REPOSITORY_LOGIN }}:${{ inputs.REPOSITORY_PASSWORD }}
-          --data-binary ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb
+        curl \
+          -vk --fail -X POST -H Content-Type:multipart/form-data \
+          -u ${{ inputs.REPOSITORY_LOGIN }}:${{ inputs.REPOSITORY_PASSWORD }} \
+          --data-binary ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb \
           ${{ inputs.REPOSITORY_URL }}
       shell: bash
     - name : Send notification on Mattermost
