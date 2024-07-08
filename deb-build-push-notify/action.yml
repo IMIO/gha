@@ -25,13 +25,17 @@ inputs:
     description: 'Package dependency'
     required: true
     default: 'passerelle'
-  SIGNER_PASSPHRASE:
-    description: 'Passphrase to sign deb package'
-    required: true
-  SIGNER_KEY:
-    description: 'Key to sign deb package'
+  SIGNER_KEY_ID:
+    description: 'ID of the key to sign deb package'
     required: true
     default: '9D4C79E197D914CF60C05332C0025EEBC59B875B'
+  SIGNER_KEY:
+    description: 'Key to sign deb package (base64 encoded)'
+    required: true
+    default: ''
+  SIGNER_KEY_PASSPHRASE:
+    description: 'Passphrase to sign deb package'
+    required: true
   MATTERMOST_WEBHOOK_URL:
     description: 'Webhook URL to send notifications on Mattermost'
     required: true
@@ -45,6 +49,12 @@ runs:
     - name: 'Install fpm'
       run: sudo gem install fpm
       shell: bash
+    - name: 'Install signing key'
+      shell: bash
+      run: |
+        echo '${{ inputs.SIGNER_KEY }}' > /tmp/key.b64 \
+        && base64 -d /tmp/key.b64 > /tmp/key.gpg \
+        && gpg --passphrase '${{ inputs.SIGNER_KEY_PASSPHRASE }}' --pinentry-mode loopback --import /tmp/key.gpg
     - name: 'Build package'
       run: |
         fpm -a amd64 \
@@ -63,9 +73,10 @@ runs:
     - name: 'Sign package'
       run: |
         dpkg-sig \
-        -g "--pinentry-mode loopback --no-tty --yes --batch --passphrase '${{ inputs.SIGNER_PASSPHRASE }}' " \
+        -g "--pinentry-mode loopback --no-tty --yes --batch --passphrase '${{ inputs.SIGNER_KEY_PASSPHRASE }}'" \
         -s builder \
-        -k ${{ inputs.SIGNER_KEY }} ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb
+        -k ${{ inputs.SIGNER_KEY_ID }} \
+        ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb
       shell: bash
     - name: 'Upload package'
       run: |
