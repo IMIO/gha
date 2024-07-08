@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [1.1] - 2024-07-08
 ### Added
 - deb-build-push-notify
 
