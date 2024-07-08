@@ -83,7 +83,7 @@ runs:
         curl \
           -vk --fail -X POST -H Content-Type:multipart/form-data \
           -u ${{ inputs.REPOSITORY_LOGIN }}:${{ inputs.REPOSITORY_PASSWORD }} \
-          --data-binary ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb \
+          --data-binary @${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb \
           ${{ inputs.REPOSITORY_URL }}
       shell: bash
     - name : Send notification on Mattermost
