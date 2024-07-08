@@ -1,5 +1,5 @@
 name: Build push deb and notify
-description: Build a deb package, push it on on repository and notify on mattermost
+description: Build a deb package, push it on specified repository and notify on mattermost
 
 inputs:
   REPOSITORY_URL:
@@ -9,7 +9,7 @@ inputs:
     description: 'Login for the repository'
     required: true
   REPOSITORY_PASSWORD:
-    description: 'Passsword for the repository'
+    description: 'Password for the repository'
     required: true
   PACKAGE_NAME:
     description: 'Name of the package to build'
@@ -89,17 +89,19 @@ runs:
     - name : Send notification on Mattermost
       env:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
+        PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Deb build $PACKAGE_NAME OK . [Click here to see job on GitHub]($JOB_URL) "
+        MESSAGE="Build and push of $PACKAGE_NAME $PACKAGE_VERSION.deb OK . [Click here to see job on GitHub]($JOB_URL) "
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
       if: ${{ failure() }}
       env:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
+        PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : cannot build deb $PACKAGE_NAME [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Error : cannot build deb $PACKAGE_NAME $PACKAGE_VERSION.deb [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash

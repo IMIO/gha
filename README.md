@@ -67,6 +67,7 @@ Build a deb package, push it on on repository and notify on mattermost
 | PACKAGE_INSTALL_PATH   |   yes    | string | `'/usr/...'`    | Path to install package |
 | PACKAGE_VERSION        |   yes    | string |                 | Package version |
 | PACKAGE_DEPENDENCY     |   yes    | string | `'passerelle'`  | Package dependency |
-| SIGNER_PASSPHRASE      |   yes    | string |                 | Passphrase to sign deb package |
-| SIGNER_KEY             |   yes    | string | `'9D4...'`      | Key to sign deb package |
+| SIGNER_KEY             |   yes    | string |                 | Key to sign deb package (base64 encoded) |
+| SIGNER_KEY_ID          |   yes    | string | `'9D4...'`      | ID of the key to sign deb package |
+| SIGNER_KEY_PASSPHRASE  |   yes    | string |                 | Passphrase to sign deb package |
 | MATTERMOST_WEBHOOK_URL |   yes    | string |                 | Webhook URL to send notifications on Mattermost |
