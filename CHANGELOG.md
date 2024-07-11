@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [2.0] - 2024-07-11
 ### Changed
 - build-push-notify (**breaking change**)
   - Parameter IMAGE_TAG removed
