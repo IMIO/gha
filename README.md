@@ -18,7 +18,7 @@ build/push a docker image using docker/build-push-action and notify via a matter
 | MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
 | PLATFORMS              |    yes   | string | `"linux/amd64"` | Platforms to build the image for |
 | CONTEXT                |    yes   | string | `"./"`          | Build context |
-| DOCKERFFILE            |    yes   | string | `"Dockerfile"`  | Name of the Dockerfile |
+| DOCKERFILE             |    yes   | string | `"Dockerfile"`  | Name of the Dockerfile |
 | BUILD_ARGS             |    yes   | string | `""`            | Build arguments to pass to the Dockerfile |
 
 
