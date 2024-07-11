@@ -11,7 +11,7 @@ build/push a docker image using docker/build-push-action and notify via a matter
 | name                   | required | type   | default         | description |
 | ---------------------- | -------- | ------ | --------------- | ----------- |
 | IMAGE_NAME             |    yes   | string |                 | Name of the image to build |
-| IMAGE_TAG              |    yes   | string | `"latest"`      | Tag of the image to build and push |
+| IMAGE_TAGS             |    yes   | string |                 | Tags of the image to build and push (one per line)|
 | REGISTRY_URL           |    yes   | string |                 | URL of the registry |
 | REGISTRY_USERNAME      |    yes   | string |                 | Username to login to registry |
 | REGISTRY_PASSWORD      |    yes   | string |                 | Password to login to registry |

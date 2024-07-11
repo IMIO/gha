@@ -4,10 +4,9 @@ inputs:
   IMAGE_NAME:
     description: 'Name of the image to build and push'
     required: true
-  IMAGE_TAG:
-    description: 'Tag of the image to build and push'
+  IMAGE_TAGS:
+    description: 'Tags of the image to build and push (one per line)'
     required: true
-    default: 'latest'
   REGISTRY_URL:
     description: 'URL of the registry'
     required: true
@@ -60,8 +59,7 @@ runs:
         context: ${{ inputs.CONTEXT }}
         file: ${{ inputs.DOCKERFILE }}
         tags: |
-          ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.IMAGE_TAG }}
-          ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.IMAGE_TAG }}-${{ github.run_number }}
+          ${{ inputs.IMAGE_TAGS }}
         platforms: ${{ inputs.PLATFORMS }}
         pull: true
         push: true
@@ -69,19 +67,19 @@ runs:
     - name : Send notification on Mattermost
       env:
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
-        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+        IMAGE_TAGS: ${{ inputs.IMAGE_TAGS }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="docker image $IMAGE_NAME:$IMAGE_TAG has been updated on registry. [Click here to see job on GitHub]($JOB_URL) "
+        MESSAGE="docker image $IMAGE_NAME:$IMAGE_TAGS has been updated on registry. [Click here to see job on GitHub]($JOB_URL) "
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
       if: ${{ failure() }}
       env:
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
-        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+        IMAGE_TAGS: ${{ inputs.IMAGE_TAGS }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : docker image  $IMAGE_NAME:$IMAGE_TAG has not been updated on registry. [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Error : docker image  $IMAGE_NAME:$IMAGE_TAGS has not been updated on registry. [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash

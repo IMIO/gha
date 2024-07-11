@@ -1,5 +1,11 @@
 # Changelog
 
+## [unreleased] - xxxx-xx-xx
+### Changed
+- build-push-notify (**breaking change**)
+  - Parameter IMAGE_TAG removed
+  - Parameter IMAGE_TAGS added (one per line)
+
 ## [1.1] - 2024-07-08
 ### Added
 - deb-build-push-notify
