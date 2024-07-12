@@ -1,5 +1,11 @@
 # Changelog
 
+## [unreleased] - xxxx-xx-xx
+### Changed
+- tag-notify (**breaking change**)
+  - Parameter NEW_IMAGE_TAG removed
+  - Parameter NEW_IMAGE_TAGS added (one per line)
+
 ## [2.0] - 2024-07-11
 ### Changed
 - build-push-notify (**breaking change**)

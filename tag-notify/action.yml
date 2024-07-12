@@ -8,8 +8,8 @@ inputs:
     description: 'Actual tag of the image'
     required: true
     default: 'staging'
-  NEW_IMAGE_TAG:
-    description: 'New tag of the image'
+  NEW_IMAGE_TAGS:
+    description: 'New tags of the image'
     required: true
     default: 'latest'
   REGISTRY_URL:
@@ -47,22 +47,29 @@ runs:
       shell: bash
     - name: Tag image
       run: |
-        docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.IMAGE_TAG }} ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.NEW_IMAGE_TAG }}
-        docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.IMAGE_TAG }} ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.NEW_IMAGE_TAG }}-${{ github.run_number }}
+        set +e
+        IFS=$'\n' read -r -d '' -a tags <<< "${{ inputs.NEW_IMAGE_TAGS }}"
+        for tag in "${tags[@]}"; do
+          echo "Tagging image with tag $tag"
+          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.IMAGE_TAG }} ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:$tag
+        done
       shell: bash
     - name: Push image
       run: |
-        docker push ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.NEW_IMAGE_TAG }}
-        docker push ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.NEW_IMAGE_TAG }}-${{ github.run_number }}
+        set +e
+        IFS=$'\n' read -r -d '' -a tags <<< "${{ inputs.NEW_IMAGE_TAGS }}"
+        for tag in "${tags[@]}"; do
+          docker push ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:$tag;
+        done
       shell: bash
     - name : Send notification on Mattermost
       env:
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
         IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
-        NEW_IMAGE_TAG: ${{ inputs.NEW_IMAGE_TAG }}
+        NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="docker image $IMAGE_NAME:$IMAGE_TAG has been tagged with $NEW_IMAGE_TAG on registry. [Click here to see job on GitHub]($JOB_URL) "
+        MESSAGE="docker image $IMAGE_NAME:$IMAGE_TAG has been tagged with $NEW_IMAGE_TAGS on registry. [Click here to see job on GitHub]($JOB_URL) "
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
@@ -70,8 +77,9 @@ runs:
       env:
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
         IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+        NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : docker image  $IMAGE_NAME:$IMAGE_TAG has not been been tagged with $NEW_IMAGE_TAG on registry. [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Error : docker image  $IMAGE_NAME:$IMAGE_TAG has not been been tagged with $NEW_IMAGE_TAGS on registry. [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
