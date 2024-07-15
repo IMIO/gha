@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [3.0] - 2024-07-15
 ### Changed
 - tag-notify (**breaking change**)
   - Parameter NEW_IMAGE_TAG removed
