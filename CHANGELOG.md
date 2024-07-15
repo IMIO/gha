@@ -4,6 +4,7 @@
 ### Added
 - build-push-notify
   - TARGET optional parameter allows to set the target stage to build
+- check-url-availibility
 
 ## [3.0] - 2024-07-15
 ### Changed

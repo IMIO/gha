@@ -1,0 +1,27 @@
+name: Check url availibility
+description: Loop until an URL is available
+inputs:
+  URL:
+    description: 'URL to test'
+    required: true
+  TIMEOUT:
+    description: 'Timeout in minutes'
+    required: true
+    default: 5
+runs:
+  using: 'composite'
+  steps:
+    - name: Check URL availibility
+      run: |
+        end=$((SECONDS+${{ inputs.TIMEOUT }}*60))
+        until curl -m 3 --output /dev/null --silent --fail '${{ inputs.URL }}';
+          do
+              if [ $SECONDS -gt $end ]; then
+                echo "Timeout reached: ${{ inputs.URL }} is not available"
+                exit 1
+              fi
+              sleep 5
+              echo "Waiting until ${{ inputs.URL }} is available"
+          done
+        echo "${{ inputs.URL }} is available"
+      shell: bash

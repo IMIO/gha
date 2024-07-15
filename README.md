@@ -72,3 +72,12 @@ Build a deb package, push it on on repository and notify on mattermost
 | SIGNER_KEY_ID          |   yes    | string | `'9D4...'`      | ID of the key to sign deb package |
 | SIGNER_KEY_PASSPHRASE  |   yes    | string |                 | Passphrase to sign deb package |
 | MATTERMOST_WEBHOOK_URL |   yes    | string |                 | Webhook URL to send notifications on Mattermost |
+
+## check-url-availibility
+
+Loop until a given url returns a 200 status-code.
+
+| name                   | required |  type   | default         | description |
+| ---------------------- | -------- | ------- | --------------- | ----------- |
+|         URL            |   yes    |  string |                 | URL to test |
+|       TIMEOUT          |   yes    | integer |       5         | Timeout (in minutes) |
