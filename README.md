@@ -20,6 +20,7 @@ build/push a docker image using docker/build-push-action and notify via a matter
 | CONTEXT                |    yes   | string | `"./"`          | Build context |
 | DOCKERFILE             |    yes   | string | `"Dockerfile"`  | Name of the Dockerfile |
 | BUILD_ARGS             |    yes   | string | `""`            | Build arguments to pass to the Dockerfile |
+| TARGET                 |    no    | string |                 | Target stage to build |
 
 
 ## rundeck-notify

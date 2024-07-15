@@ -35,6 +35,9 @@ inputs:
     description: 'Build arguments to pass to the Dockerfile'
     required: true
     default: ''
+  TARGET:
+    description: 'Target stage to build'
+    required: false
 runs:
   using: 'composite'
   steps:
@@ -64,6 +67,7 @@ runs:
         pull: true
         push: true
         build-args: ${{ inputs.BUILD_ARGS }}
+        target: ${{ inputs.TARGET }}
     - name : Send notification on Mattermost
       env:
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
