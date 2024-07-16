@@ -1,9 +1,10 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
-### Added
+## [3.1] - 2024-07-16
+### Changed
 - build-push-notify
   - TARGET optional parameter allows to set the target stage to build
+### Added
 - check-url-availibility
 
 ## [3.0] - 2024-07-15
