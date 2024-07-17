@@ -22,6 +22,9 @@ build/push a docker image using docker/build-push-action and notify via a matter
 | BUILD_ARGS             |    yes   | string | `""`            | Build arguments to pass to the Dockerfile |
 | TARGET                 |    no    | string |                 | Target stage to build |
 
+### Example of usage
+
+[IMIO/docker-teleservices](https://github.com/IMIO/docker-teleservices/blob/7ee9bd77714bbbd1049c510aae222105460d72c6/.github/workflows/publish.yml#L16)
 
 ## rundeck-notify
 
@@ -36,6 +39,10 @@ call a rundeck job and notify via a mattermost webhook
 | RUNDECK_JOB_ID         |    yes   | string |                 | ID of the rundeck job to call |
 | RUNDECK_PARAMETERS     |    no    | string |                 | Parameters to pass to the Rundeck job |
 | MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
+
+### Example of usage
+
+[IMIO/buildout.news](https://github.com/IMIO/buildout.news/blob/6b229a3a0e00dda2986e496ebc7b70da2069273e/.github/workflows/prod.yml#L35)
 
 ## tag-notify
 
@@ -52,6 +59,10 @@ Add tags to a docker image and notify via a mattermost webhook
 | REGISTRY_USERNAME      |    yes   | string |                 | Username to login to registry |
 | REGISTRY_PASSWORD      |    yes   | string |                 | Password to login to registry |
 | MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
+
+### Example of usage
+
+[IMIO/buildout.ideabox](https://github.com/IMIO/buildout.ideabox/blob/9e8218d6f52a5060d14139864b6b0d993f633202/.github/workflows/prod.yml#L16)
 
 ## deb-build-push-notify
 
@@ -73,11 +84,19 @@ Build a deb package, push it on on repository and notify on mattermost
 | SIGNER_KEY_PASSPHRASE  |   yes    | string |                 | Passphrase to sign deb package |
 | MATTERMOST_WEBHOOK_URL |   yes    | string |                 | Webhook URL to send notifications on Mattermost |
 
+### Example of usage
+
+[IMIO/scripts-teleservices](https://github.com/IMIO/scripts-teleservices/blob/613d1563be3ddbafb3c66347022558c5dffb678c/.github/workflows/deb.yml#L20)
+
 ## check-url-availibility
 
-Loop until a given url returns a 200 status-code.
+Loop until a given url returns a 200 status-code. Can be used during deployments to test if an app is available.
 
 | name                   | required |  type   | default         | description |
 | ---------------------- | -------- | ------- | --------------- | ----------- |
 |         URL            |   yes    |  string |                 | URL to test |
 |       TIMEOUT          |   yes    | integer |       5         | Timeout (in minutes) |
+
+### Example of usage
+
+[IMIO/docker-teleservices](https://github.com/IMIO/docker-teleservices/blob/7ee9bd77714bbbd1049c510aae222105460d72c6/.github/workflows/publish.yml#L59)
