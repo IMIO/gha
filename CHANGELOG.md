@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [3.2] - 2024-07-18
 ### Added
 - deb-build-push-notify
   - github branch name on notification message
