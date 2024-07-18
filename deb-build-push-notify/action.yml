@@ -90,9 +90,10 @@ runs:
       env:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
         PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
+        GITHUB_BRANCH: ${{ github.ref_name }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Build and push of $PACKAGE_NAME $PACKAGE_VERSION.deb OK . [Click here to see job on GitHub]($JOB_URL) "
+        MESSAGE="Build and push of $PACKAGE_NAME $PACKAGE_VERSION.deb OK (Branch : $GITHUB_BRANCH) . [Click here to see job on GitHub]($JOB_URL) "
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
@@ -100,8 +101,9 @@ runs:
       env:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
         PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
+        GITHUB_BRANCH: ${{ github.ref_name }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : cannot build deb $PACKAGE_NAME $PACKAGE_VERSION.deb [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Error : cannot build deb $PACKAGE_NAME $PACKAGE_VERSION.deb  (Branch : $GITHUB_BRANCH) . [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
