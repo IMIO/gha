@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3] - 2024-07-19
+### Added
+- build-push-notify and tag-notify
+  - bump actions/checkout to v4
+  - bump docker/setup-qemu-action to v3
+  - bump docker/setup-buildx-action to v3
+
 ## [3.2] - 2024-07-18
 ### Added
 - deb-build-push-notify
