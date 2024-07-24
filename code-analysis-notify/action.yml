@@ -28,17 +28,17 @@ runs:
       shell: bash
     - name: Checkout
       uses: actions/checkout@v4
+    - name: Run checks
+      uses: IMIO/code-analysis-action@main
       with:  
         check: ${{ inputs.CHECK }}
         path: ${{ inputs.PATH }}
         base_dir: ${{ inputs.BASE_DIR }}
         log_level: ${{ inputs.LOG_LEVEL }}
-    - name: Run checks
-      uses: IMIO/code-analysis-action@main
     - name : Send notification on Mattermost
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="code analysis has run successfully. (Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="code analysis has run successfully. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
@@ -49,6 +49,6 @@ runs:
         NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : code analysis has failed. (Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Error : code analysis has failed. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash

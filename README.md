@@ -113,7 +113,7 @@ This github action uses the [code-analysis-action](https://github.com/plone/code
 | ---------------------- | -------- | ------ | --------------- | ----------- |
 | BASE_DIR               |    no    | string |                 | Base directory |
 | CHECK                  |    no    | string |                 | Checks to be used |
-| PATHS                  |    no    | string |                 | Paths to be checked |
+| PATH                   |    no    | string |                 | Path to be checked |
 | LOG_LEVEL              |    no    | string | "INFO"          | Log level |
 | MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
 
