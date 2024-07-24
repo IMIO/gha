@@ -123,4 +123,14 @@ This github action uses the [code-analysis-action](https://github.com/plone/code
 
 ## plone-package-test-notify
 
+Test a Plone package and notify via a mattermost webhook
 
+### Inputs
+
+| name                   | required | type   | default            | description |
+| ---------------------- | -------- | ------ | ------------------ | ----------- |
+| PYTHON_VERSION         |    yes   | string | "3.10"             | Python version to use |
+| TEST_COMMAND           |    yes   | string | "bin/test"         | Test command to run |
+| REQUIREMENTS_FILE      |    yes   | string | "requirements.txt" | Requirements file |
+| BUILDOUT_CONFIG_FILE   |    yes   | string | "buildout.cfg"     | Buildout config file |
+| MATTERMOST_WEBHOOK_URL |    yes   | string |                    | Webhook URL to send notifications on Mattermost |
