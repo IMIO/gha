@@ -30,7 +30,7 @@ runs:
       uses: actions/checkout@v4
     - name: Run checks
       uses: IMIO/code-analysis-action@main
-      with:  
+      with:
         check: ${{ inputs.CHECK }}
         path: ${{ inputs.PATH }}
         base_dir: ${{ inputs.BASE_DIR }}

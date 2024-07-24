@@ -117,7 +117,10 @@ This github action uses the [code-analysis-action](https://github.com/plone/code
 | LOG_LEVEL              |    no    | string | "INFO"          | Log level |
 | MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
 
-
 ### Example of usage
 
-[IMIO/buildout.ideabox](https://github.com/IMIO/buildout.ideabox/blob/9e8218d6f52a5060d14139864b6b0d993f633202/.github/workflows/prod.yml#L16)
+/
+
+## plone-package-test-notify
+
+

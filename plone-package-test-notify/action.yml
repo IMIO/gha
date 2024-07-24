@@ -1,0 +1,71 @@
+name: Run code analysis
+description: Run code analysis and notify on Mattermost
+inputs:
+  PYTHON_VERSION:
+    description: 'Python version to use'
+    required: true
+    default: "3.10"
+  TEST_COMMAND:
+    description: 'Command to run tests'
+    required: true
+    default: "bin/test"
+  REQUIREMENTS_FILE:
+    description: 'Path to requirements file'
+    required: true
+    default: "requirements.txt"
+  BUILDOUT_CONFIG_FILE:
+    description: 'Path to buildout configuration file'
+    required: true
+    default: "buildout.cfg"
+  MATTERMOST_WEBHOOK_URL:
+    description: 'Webhook URL to send notifications on Mattermost'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Install curl
+      run: sudo apt-get update && sudo apt-get install -y curl
+      shell: bash
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Cache eggs
+      uses: actions/cache@v4
+      env:
+        cache-name: cache-eggs
+      with: 
+        path: ./eggs
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.python-version }}
+        restore-keys: ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.python-version }}
+    - name: Setup Python ${{ inputs.PYTHON_VERSION }}
+      uses: actions/setup-python@v5.1.1
+      with:
+        python-version: ${{ inputs.PYTHON_VERSION }}
+    - name: Install dependencies
+      shell: bash
+      run: |
+        pip install -r ${{ inputs.REQUIREMENTS_FILE }}
+    - name: Run buildout
+      shell: bash
+      run: |
+        buildout -c ${{ inputs.BUILDOUT_CONFIG_FILE }} buildout:eggs-directory=./eggs     
+    - name: Run tests
+      shell: bash
+      run: |
+        ${{ inputs.TEST_COMMAND }}
+    - name : Send notification on Mattermost
+      run: |
+        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        MESSAGE="Test has run successfully. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+      shell: bash
+    - name : Send failure notification on Mattermost
+      if: ${{ failure() }}
+      env:
+        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
+        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+        NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
+      run: |
+        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        MESSAGE="Error : Test has failed. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+      shell: bash
