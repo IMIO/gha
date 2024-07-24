@@ -100,3 +100,24 @@ Loop until a given url returns a 200 status-code. Can be used during deployments
 ### Example of usage
 
 [IMIO/docker-teleservices](https://github.com/IMIO/docker-teleservices/blob/7ee9bd77714bbbd1049c510aae222105460d72c6/.github/workflows/publish.yml#L59)
+
+## code-analysis-notify
+
+Run checks for Plone backend code and notify via a mattermost webhook
+
+This github action uses the [code-analysis-action](https://github.com/plone/code-analysis-action/tree/main) from the Plone organization.
+
+### Inputs
+
+| name                   | required | type   | default         | description |
+| ---------------------- | -------- | ------ | --------------- | ----------- |
+| BASE_DIR               |    no    | string |                 | Base directory |
+| CHECK                  |    no    | string |                 | Checks to be used |
+| PATHS                  |    no    | string |                 | Paths to be checked |
+| LOG_LEVEL              |    no    | string | "INFO"          | Log level |
+| MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
+
+
+### Example of usage
+
+[IMIO/buildout.ideabox](https://github.com/IMIO/buildout.ideabox/blob/9e8218d6f52a5060d14139864b6b0d993f633202/.github/workflows/prod.yml#L16)

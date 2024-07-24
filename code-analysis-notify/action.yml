@@ -1,0 +1,54 @@
+name: Run code analysis
+description: Run code analysis and notify on Mattermost
+inputs:
+  BASE_DIR:
+    description: 'Base directory'
+    required: false
+    default: ""
+  CHECK:
+    description: 'Check to be used'
+    required: false
+    default: ""
+  PATH:
+    description: 'Paths to be checked'
+    required: false
+    default: ""
+  LOG_LEVEL:
+    description: 'Log level'
+    required: false
+    default: 'INFO'
+  MATTERMOST_WEBHOOK_URL:
+    description: 'Webhook URL to send notifications on Mattermost'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Install curl
+      run: sudo apt-get update && sudo apt-get install -y curl
+      shell: bash
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:  
+        check: ${{ inputs.CHECK }}
+        path: ${{ inputs.PATH }}
+        base_dir: ${{ inputs.BASE_DIR }}
+        log_level: ${{ inputs.LOG_LEVEL }}
+    - name: Run checks
+      uses: IMIO/code-analysis-action@main
+    - name : Send notification on Mattermost
+      run: |
+        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        MESSAGE="code analysis has run successfully. (Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+      shell: bash
+    - name : Send failure notification on Mattermost
+      if: ${{ failure() }}
+      env:
+        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
+        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+        NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
+      run: |
+        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        MESSAGE="Error : code analysis has failed. (Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+      shell: bash
