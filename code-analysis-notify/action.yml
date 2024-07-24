@@ -16,7 +16,7 @@ inputs:
   LOG_LEVEL:
     description: 'Log level'
     required: false
-    default: 'INFO'
+    default: "INFO"
   MATTERMOST_WEBHOOK_URL:
     description: 'Webhook URL to send notifications on Mattermost'
     required: true
