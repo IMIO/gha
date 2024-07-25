@@ -1,0 +1,32 @@
+name: Create release
+
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release pushed tag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Get changelog from CHANGELOG.md
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          changelog=$(awk "/^## \[$tag\]/{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md)
+          echo "$changelog" > NOTES.md
+          cat NOTES.md
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+        run: |
+          echo gh release create "$tag" \
+              --repo="$GITHUB_REPOSITORY" \
+              --title="$tag" \
+              -F NOTES.md
