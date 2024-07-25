@@ -1,5 +1,13 @@
 # Changelog
 
+## [unreleased] - xxxx-xx-xx
+### Changed
+- All actions
+  - MATTERMOST_WEBHOOK_URL is now optional. If not specified, notifications won't be sent
+### Added
+- code-analysis-notify
+- plone-package-test-notify
+
 ## [3.3] - 2024-07-19
 ### Added
 - build-push-notify and tag-notify

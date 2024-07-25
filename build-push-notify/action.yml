@@ -17,8 +17,8 @@ inputs:
     description: 'Password to login to registry'
     required: true
   MATTERMOST_WEBHOOK_URL:
-    description: 'Webhook URL to send notifications on Mattermost'
-    required: true
+    description: 'Webhook URL to send notifications on Mattermost. If not provided, notifications will not be sent'
+    required: false
   PLATFORMS:
     description: 'Platforms to build the image for'
     required: true
@@ -69,6 +69,7 @@ runs:
         build-args: ${{ inputs.BUILD_ARGS }}
         target: ${{ inputs.TARGET }}
     - name : Send notification on Mattermost
+      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       env:
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
         IMAGE_TAGS: ${{ inputs.IMAGE_TAGS }}
@@ -78,7 +79,7 @@ runs:
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
-      if: ${{ failure() }}
+      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
       env:
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
         IMAGE_TAGS: ${{ inputs.IMAGE_TAGS }}

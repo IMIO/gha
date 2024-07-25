@@ -37,8 +37,8 @@ inputs:
     description: 'Passphrase to sign deb package'
     required: true
   MATTERMOST_WEBHOOK_URL:
-    description: 'Webhook URL to send notifications on Mattermost'
-    required: true
+    description: 'Webhook URL to send notifications on Mattermost, if not provided, notifications will not be sent'
+    required: false
 
 runs:
   using: 'composite'
@@ -87,6 +87,7 @@ runs:
           ${{ inputs.REPOSITORY_URL }}
       shell: bash
     - name : Send notification on Mattermost
+      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       env:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
         PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
@@ -97,7 +98,7 @@ runs:
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
-      if: ${{ failure() }}
+      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
       env:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
         PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}

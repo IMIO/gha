@@ -11,8 +11,8 @@ inputs:
     description: 'ID of the Rundeck job to call'
     required: true
   MATTERMOST_WEBHOOK_URL:
-    description: 'Webhook URL to send notifications on Mattermost'
-    required: true
+    description: 'Webhook URL to send notifications on Mattermost, if not provided, notifications will not be sent'
+    required: false
   RUNDECK_PARAMETERS:
     description: 'Parameters to pass to the Rundeck job'
     required: false
@@ -28,6 +28,7 @@ runs:
         curl -i --fail-with-body ${{ inputs.RUNDECK_PARAMETERS }} -H "X-Rundeck-Auth-Token: ${{ inputs.RUNDECK_TOKEN }}" ${{ inputs.RUNDECK_URL }}/api/18/job/${{ inputs.RUNDECK_JOB_ID }}/run/
       shell: bash
     - name : Send notification on Mattermost
+      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       env:
         RUNDECK_JOB_ID: ${{ inputs.RUNDECK_JOB_ID }}
       run: |
@@ -36,7 +37,7 @@ runs:
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
-      if: ${{ failure() }}
+      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
       env:
         RUNDECK_JOB_ID: ${{ inputs.RUNDECK_JOB_ID }}
       run: |

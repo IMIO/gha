@@ -28,7 +28,7 @@ build/push a docker image using docker/build-push-action and notify via a matter
 
 ## rundeck-notify
 
-call a rundeck job and notify via a mattermost webhook
+call a rundeck job and optionally notify via a mattermost webhook
 
 ### Inputs
 
@@ -38,7 +38,7 @@ call a rundeck job and notify via a mattermost webhook
 | RUNDECK_TOKEN          |    yes   | string |                 | Auth token to call Rundeck job |
 | RUNDECK_JOB_ID         |    yes   | string |                 | ID of the rundeck job to call |
 | RUNDECK_PARAMETERS     |    no    | string |                 | Parameters to pass to the Rundeck job |
-| MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
+| MATTERMOST_WEBHOOK_URL |    no    | string |                 | Webhook URL to send notifications on Mattermost |
 
 ### Example of usage
 
@@ -46,7 +46,7 @@ call a rundeck job and notify via a mattermost webhook
 
 ## tag-notify
 
-Add tags to a docker image and notify via a mattermost webhook
+Add tags to a docker image and optionally notify via a mattermost webhook
 
 ### Inputs
 
@@ -58,7 +58,7 @@ Add tags to a docker image and notify via a mattermost webhook
 | REGISTRY_URL           |    yes   | string |                 | URL of the registry |
 | REGISTRY_USERNAME      |    yes   | string |                 | Username to login to registry |
 | REGISTRY_PASSWORD      |    yes   | string |                 | Password to login to registry |
-| MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
+| MATTERMOST_WEBHOOK_URL |    no    | string |                 | Webhook URL to send notifications on Mattermost |
 
 ### Example of usage
 
@@ -66,7 +66,7 @@ Add tags to a docker image and notify via a mattermost webhook
 
 ## deb-build-push-notify
 
-Build a deb package, push it on on repository and notify on mattermost
+Build a deb package, push it on a repository and optionally notify via a mattermost webhook
 
 ### Inputs
 
@@ -82,7 +82,7 @@ Build a deb package, push it on on repository and notify on mattermost
 | SIGNER_KEY             |   yes    | string |                 | Key to sign deb package (base64 encoded) |
 | SIGNER_KEY_ID          |   yes    | string | `'9D4...'`      | ID of the key to sign deb package |
 | SIGNER_KEY_PASSPHRASE  |   yes    | string |                 | Passphrase to sign deb package |
-| MATTERMOST_WEBHOOK_URL |   yes    | string |                 | Webhook URL to send notifications on Mattermost |
+| MATTERMOST_WEBHOOK_URL |   no     | string |                 | Webhook URL to send notifications on Mattermost |
 
 ### Example of usage
 
@@ -103,7 +103,7 @@ Loop until a given url returns a 200 status-code. Can be used during deployments
 
 ## code-analysis-notify
 
-Run checks for Plone backend code and notify via a mattermost webhook
+Run checks for Plone backend code and optionally notify via a mattermost webhook
 
 This github action uses the [code-analysis-action](https://github.com/plone/code-analysis-action/tree/main) from the Plone organization.
 
@@ -115,7 +115,7 @@ This github action uses the [code-analysis-action](https://github.com/plone/code
 | CHECK                  |    no    | string |                 | Checks to be used |
 | PATH                   |    no    | string |                 | Path to be checked |
 | LOG_LEVEL              |    no    | string | "INFO"          | Log level |
-| MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
+| MATTERMOST_WEBHOOK_URL |    no    | string |                 | Webhook URL to send notifications on Mattermost |
 
 ### Example of usage
 
@@ -123,7 +123,7 @@ This github action uses the [code-analysis-action](https://github.com/plone/code
 
 ## plone-package-test-notify
 
-Test a Plone package and notify via a mattermost webhook
+Test a Plone package and optionally notify via a mattermost webhook
 
 ### Inputs
 
@@ -133,4 +133,4 @@ Test a Plone package and notify via a mattermost webhook
 | TEST_COMMAND           |    yes   | string | "bin/test"         | Test command to run |
 | REQUIREMENTS_FILE      |    yes   | string | "requirements.txt" | Requirements file |
 | BUILDOUT_CONFIG_FILE   |    yes   | string | "buildout.cfg"     | Buildout config file |
-| MATTERMOST_WEBHOOK_URL |    yes   | string |                    | Webhook URL to send notifications on Mattermost |
+| MATTERMOST_WEBHOOK_URL |    no    | string |                    | Webhook URL to send notifications on Mattermost |
