@@ -24,22 +24,23 @@ runs:
       run: sudo apt-get update && sudo apt-get install -y curl
       shell: bash
     - name: Call Rundeck job
+      id: call-rundeck-job
       run: |
-        curl -i --fail-with-body ${{ inputs.RUNDECK_PARAMETERS }} -H "X-Rundeck-Auth-Token: ${{ inputs.RUNDECK_TOKEN }}" ${{ inputs.RUNDECK_URL }}/api/18/job/${{ inputs.RUNDECK_JOB_ID }}/run/ -o rundeck-response.json
-        JOB_NAME=$(jq -r .job.name rundeck-response.json)
-        JOB_EXECUTION_PERMALINK=$(jq -r .permalink rundeck-response.json)
+        curl --fail-with-body ${{ inputs.RUNDECK_PARAMETERS }} -H "X-Rundeck-Auth-Token: ${{ inputs.RUNDECK_TOKEN }}" ${{ inputs.RUNDECK_URL }}/api/18/job/${{ inputs.RUNDECK_JOB_ID }}/run/ -o rundeck-response.json
+        echo "JOB_NAME=$(jq -r .job.name rundeck-response.json)" >> "$GITHUB_OUTPUT"
+        echo "JOB_EXECUTION_PERMALINK=$(jq -r .permalink rundeck-response.json)" >> "$GITHUB_OUTPUT"
       shell: bash
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="rundeck job [$JOB_NAME]($JOB_EXECUTION_PERMALINK) has been successfully called . [Click here to see job on GitHub]($JOB_URL) "
+        MESSAGE="rundeck job [${{ steps.call-rundeck-job.outputs.JOB_NAME }}](${{ steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK }}) has been successfully called . [Click here to see job on GitHub]($JOB_URL) "
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
       if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : cannot call rundeck job [$JOB_NAME]($JOB_EXECUTION_PERMALINK). [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Error : cannot call rundeck job [${{ steps.call-rundeck-job.outputs.JOB_NAME }}](${{ steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK }}). [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
