@@ -3,7 +3,7 @@
 ## [unreleased] - xxxx-xx-xx
 ## Changed
   - rundeck-notify
-    - notification message now includes a link to rundeck job
+    - notification message is more explicit and includes a hyperlink to the rundeck job
 
 
 ## [v3.4] - 2024-07-25

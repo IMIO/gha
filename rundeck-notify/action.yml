@@ -34,13 +34,13 @@ runs:
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="rundeck job [${{ steps.call-rundeck-job.outputs.JOB_NAME }}](${{ steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK }}) has been successfully called . [Click here to see job on GitHub]($JOB_URL) "
+        MESSAGE="Rundeck job [${{ steps.call-rundeck-job.outputs.JOB_NAME }}](${{ steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK }}) has been successfully executed by [GitHub workflow $GITHUB_WORKFLOW]($JOB_URL) on repository [$GITHUB_REPOSITORY]"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
       if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : cannot call rundeck job [${{ steps.call-rundeck-job.outputs.JOB_NAME }}](${{ steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK }}). [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Error : there was an error in executation of Rundeck job [${{ steps.call-rundeck-job.outputs.JOB_NAME }}](${{ steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK }})by [GitHub workflow $GITHUB_WORKFLOW]($JOB_URL) on repository [$GITHUB_REPOSITORY]"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
