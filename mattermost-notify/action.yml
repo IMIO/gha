@@ -1,0 +1,18 @@
+name: Notify on Mattermost
+description: Send a notification on a Mattermost webhook
+inputs:
+  MATTERMOST_WEBHOOK_URL:
+    description: 'Webhook URL to send notification on Mattermost'
+    required: true
+  MESSAGE:
+    description: 'Message to send on Mattermost'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Install curl
+      run: sudo apt-get update && sudo apt-get install -y curl
+    - name : Send notification on Mattermost
+      run: |
+        curl -i --fail-with-body -X POST -H 'Content-Type: application/json' -d "{\"text\": \"${{ inputs.MESSAGE }} \"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+      shell: bash

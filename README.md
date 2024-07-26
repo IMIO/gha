@@ -9,6 +9,7 @@ github actions we use to deploy our apps
 - [check-url-availibility](#check-url-availibility)
 - [code-analysis-notify](#code-analysis-notify)
 - [deb-build-push-notify](#deb-build-push-notify)
+- [mattermost-notify](#mattermost-notify)
 - [plone-package-test-notify](#plone-package-test-notify)
 - [rundeck-notify](#rundeck-notify)
 - [tag-notify](#tag-notify)
@@ -111,6 +112,26 @@ Test a Plone package and optionally notify via a mattermost webhook
 | REQUIREMENTS_FILE      |    yes   | string | "requirements.txt" | Requirements file |
 | BUILDOUT_CONFIG_FILE   |    yes   | string | "buildout.cfg"     | Buildout config file |
 | MATTERMOST_WEBHOOK_URL |    no    | string |                    | Webhook URL to send notifications on Mattermost |
+
+#### Example of usage
+
+/
+
+---
+### mattermost-notify
+
+Send a notification on a Mattermost webhook
+
+#### Inputs
+
+| name                   | required | type   | default         | description |
+| ---------------------- | -------- | ------ | --------------- | ----------- |
+| MESSAGE                |    yes   | string |                 | Message to send on Mattermost |
+| MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
+
+#### Example of usage
+
+/
 
 ---
 ### rundeck-notify

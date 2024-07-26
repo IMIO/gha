@@ -1,5 +1,9 @@
 # Changelog
 
+## [unreleased] - xxxx-xx-xx
+### Added
+- mattermost-notify
+
 ## [v3.5] - 2024-07-26
 ### Changed
   - rundeck-notify
