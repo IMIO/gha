@@ -12,6 +12,7 @@ runs:
   steps:
     - name: Install curl
       run: sudo apt-get update && sudo apt-get install -y curl
+      shell: bash
     - name : Send notification on Mattermost
       run: |
         curl -i --fail-with-body -X POST -H 'Content-Type: application/json' -d "{\"text\": \"${{ inputs.MESSAGE }} \"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
