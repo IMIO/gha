@@ -1,7 +1,7 @@
 # Changelog
 
 ## [v3.5] - 2024-07-26
-## Changed
+### Changed
   - rundeck-notify
     - notification message is more explicit and includes a hyperlink to the rundeck job
 
