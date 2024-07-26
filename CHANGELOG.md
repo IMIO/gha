@@ -1,5 +1,11 @@
 # Changelog
 
+## [unreleased] - xxxx-xx-xx
+## Changed
+  - rundeck-notify
+    - notification message now includes a link to rundeck job
+
+
 ## [v3.4] - 2024-07-25
 ### Changed
 - All actions
