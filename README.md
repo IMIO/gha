@@ -131,7 +131,7 @@ Send a notification on a Mattermost webhook
 
 #### Example of usage
 
-/
+[IMIO/imio_smartweb_themes](https://github.com/IMIO/imio_smartweb_themes/blob/12c86daff672c89fa90a21c6fe6f6b4214d94547/.github/workflows/build-upload.yml#L63)
 
 ---
 ### rundeck-notify

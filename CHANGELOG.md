@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [v3.6] - 2024-07-26
 ### Added
 - mattermost-notify
 
