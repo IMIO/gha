@@ -75,7 +75,7 @@ runs:
         IMAGE_TAGS: ${{ inputs.IMAGE_TAGS }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="docker image $IMAGE_NAME:$IMAGE_TAGS has been updated on registry. [Click here to see job on GitHub]($JOB_URL) "
+        MESSAGE="docker image $IMAGE_TAGS has been updated on registry. [Click here to see job on GitHub]($JOB_URL) "
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
@@ -85,6 +85,6 @@ runs:
         IMAGE_TAGS: ${{ inputs.IMAGE_TAGS }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : docker image  $IMAGE_NAME:$IMAGE_TAGS has not been updated on registry. [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Error : docker image  $IMAGE_TAGS has not been updated on registry. [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash

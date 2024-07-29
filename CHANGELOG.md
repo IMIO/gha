@@ -1,5 +1,10 @@
 # Changelog
 
+## [unreleased] - xxxx-xx-xx
+### Fixed
+- build-push-notify
+  - only send tags on notification to avoid duplicates
+
 ## [v3.6] - 2024-07-26
 ### Added
 - mattermost-notify
