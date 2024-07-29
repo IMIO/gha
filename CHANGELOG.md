@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [v3.6.1] - 2024-07-29
 ### Fixed
 - build-push-notify
   - only send tags on notification to avoid duplicates
