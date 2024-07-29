@@ -4,6 +4,8 @@
 ### Fixed
 - build-push-notify
   - only send tags on notification to avoid duplicates
+- rundeck-notify
+  - hyperlink to github repository on notification message
 
 ## [v3.6] - 2024-07-26
 ### Added
