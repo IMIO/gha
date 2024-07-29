@@ -11,6 +11,14 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Install curl
+      run: |
+        if which curl > /dev/null; then
+          echo "curl is already installed"
+        else
+          sudo apt-get update && sudo apt-get install -y curl
+        fi
+      shell: bash
     - name: Check URL availibility
       run: |
         end=$((SECONDS+${{ inputs.TIMEOUT }}*60))

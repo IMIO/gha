@@ -1,5 +1,9 @@
 # Changelog
 
+## [unreleased] - xxxx-xx-xx
+- All actions
+  - only install curl if not already present on system
+
 ## [v3.6.1] - 2024-07-29
 ### Fixed
 - build-push-notify
