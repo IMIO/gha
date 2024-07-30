@@ -1,8 +1,8 @@
 # iMio github actions
 
-![GitHub Release](https://img.shields.io/github/v/release/IMIO/gha)
+[![GitHub Release](https://img.shields.io/github/v/release/IMIO/gha)](https://github.com/IMIO/gha/blob/main/CHANGELOG.md)
 
-github actions we use to deploy our apps
+This repository hosts a set of github actions we use to deploy our apps.
 
 ## Actions
 - [build-push-notify](#build-push-notify)
