@@ -23,6 +23,7 @@ jobs:
           echo "$changelog" > NOTES.md
           cat NOTES.md
       - name: Create release
+        if: ${{ !env.ACT }} # do not run locally
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ github.ref_name }}
