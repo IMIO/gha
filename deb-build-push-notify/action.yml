@@ -43,11 +43,21 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: 'Install curl, dpkg-sig, python3-pip and ruby-dev'
-      run: sudo apt-get update && sudo apt-get install -y curl dpkg-sig python3-pip ruby-dev
+    - name: 'Install ar, curl, dpkg-sig, python3-pip and ruby-dev'
+      run: |
+        if which ar > /dev/null && which curl > /dev/null && which dpkg-sig > /dev/null && which pip3 > /dev/null && which gem > /dev/null; then
+          echo "Packages are already installed"
+        else
+          sudo apt-get update && sudo apt-get install -y binutils curl dpkg-sig python3-pip ruby-dev
+        fi
       shell: bash
     - name: 'Install fpm'
-      run: sudo gem install fpm
+      run: |
+        if which fpm > /dev/null; then
+          echo "fpm is already installed"
+        else
+          sudo gem install fpm
+        fi
       shell: bash
     - name: 'Install signing key'
       shell: bash
