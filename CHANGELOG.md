@@ -1,6 +1,12 @@
 # Changelog
 
+## [v3.7.1] - 2024-07-30
+### Fixed
+- deb-build-push-notify
+  - missing dependency
+
 ## [v3.7] - 2024-07-30
+### Changed
 - All actions
   - only install curl if not already present on system to speedup workflow
 
