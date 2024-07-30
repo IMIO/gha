@@ -1,8 +1,8 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [v3.7] - 2024-07-30
 - All actions
-  - only install curl if not already present on system
+  - only install curl if not already present on system to speedup workflow
 
 ## [v3.6.1] - 2024-07-29
 ### Fixed
