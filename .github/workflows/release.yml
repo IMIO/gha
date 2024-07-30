@@ -18,6 +18,7 @@ jobs:
       - name: Get changelog from CHANGELOG.md
         run: |
           tag="${GITHUB_REF#refs/tags/}"
+          echo "Tag: $tag"
           changelog=$(awk "/^## \[$tag\]/{flag=1;next}/^## /{flag=0}flag" CHANGELOG.md)
           echo "$changelog" > NOTES.md
           cat NOTES.md
