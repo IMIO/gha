@@ -1,5 +1,10 @@
 # Changelog
 
+## [v3.7.2] - 2024-07-31
+### Fixed
+- rundeck-notify
+  - missing dependency
+
 ## [v3.7.1] - 2024-07-30
 ### Fixed
 - deb-build-push-notify

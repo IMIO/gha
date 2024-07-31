@@ -20,12 +20,12 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install curl
+    - name: Install curl and jq
       run: |
-        if which curl > /dev/null; then
-          echo "curl is already installed"
+        if which curl > /dev/null && which jq > /dev/null; then
+          echo "curl and jq are already installed"
         else
-          sudo apt-get update && sudo apt-get install -y curl
+          sudo apt-get update && sudo apt-get install -y curl jq
         fi
       shell: bash
     - name: Call Rundeck job
