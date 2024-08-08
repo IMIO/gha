@@ -11,6 +11,7 @@ This repository hosts a set of github actions we use to deploy our apps.
 - [deb-build-push-notify](#deb-build-push-notify)
 - [mattermost-notify](#mattermost-notify)
 - [plone-package-test-notify](#plone-package-test-notify)
+- [plone-theme-build-push-notify](#plone-theme-build-push-notify)
 - [rundeck-notify](#rundeck-notify)
 - [tag-notify](#tag-notify)
 
@@ -150,7 +151,7 @@ Build a theme, upload it to a plone site and optionally notify on Mattermost
 
 #### Example of usage
 
-/
+[IMIO/imio_smartweb_themes](https://github.com/IMIO/imio_smartweb_themes/blob/2268e1ee7350214b7fe7e98c4353622a61c3250a/.github/workflows/build-upload.yml#L117)
 
 ---
 ### rundeck-notify
