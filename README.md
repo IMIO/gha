@@ -99,6 +99,22 @@ Build a deb package, push it on a repository and optionally notify via a matterm
 [IMIO/scripts-teleservices](https://github.com/IMIO/scripts-teleservices/blob/613d1563be3ddbafb3c66347022558c5dffb678c/.github/workflows/deb.yml#L20)
 
 ---
+### mattermost-notify
+
+Send a notification on a Mattermost webhook
+
+#### Inputs
+
+| name                   | required | type   | default         | description |
+| ---------------------- | -------- | ------ | --------------- | ----------- |
+| MESSAGE                |    yes   | string |                 | Message to send on Mattermost |
+| MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
+
+#### Example of usage
+
+[IMIO/imio_smartweb_themes](https://github.com/IMIO/imio_smartweb_themes/blob/12c86daff672c89fa90a21c6fe6f6b4214d94547/.github/workflows/build-upload.yml#L63)
+
+---
 ### plone-package-test-notify
 
 Test a Plone package and optionally notify via a mattermost webhook
@@ -116,22 +132,6 @@ Test a Plone package and optionally notify via a mattermost webhook
 #### Example of usage
 
 /
-
----
-### mattermost-notify
-
-Send a notification on a Mattermost webhook
-
-#### Inputs
-
-| name                   | required | type   | default         | description |
-| ---------------------- | -------- | ------ | --------------- | ----------- |
-| MESSAGE                |    yes   | string |                 | Message to send on Mattermost |
-| MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
-
-#### Example of usage
-
-[IMIO/imio_smartweb_themes](https://github.com/IMIO/imio_smartweb_themes/blob/12c86daff672c89fa90a21c6fe6f6b4214d94547/.github/workflows/build-upload.yml#L63)
 
 ---
 ### rundeck-notify
