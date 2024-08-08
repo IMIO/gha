@@ -1,0 +1,62 @@
+name: Upload plone theme and notify on Mattermost
+description: Upload a theme to a plone site and optionally notify on Mattermost
+inputs:
+  THEME_PATH:
+    description: 'Folder where theme files are located'
+    required: true
+  PLONE_URL:
+    description: 'URL of the Plone site'
+    required: true
+  PLONE_USERNAME:
+    description: 'Username to login to Plone'
+    required: true
+  PLONE_PASSWORD:
+    description: 'Password to login to Plone'
+    required: true
+  MATTERMOST_WEBHOOK_URL:
+    description: 'Webhook URL to send notifications on Mattermost, if not provided, notifications will not be sent'
+    required: false
+runs:
+  using: 'composite'
+  steps:
+    - name: Install curl
+      run: |
+        if which curl > /dev/null ; then
+          echo "curl is already installed"
+        else
+          sudo apt-get update && sudo apt-get install -y curl
+        fi
+      shell: bash
+    - name: Install pip3 and python packages
+      run: |
+        if which pip3 > /dev/null ; then
+          echo "pip3 is already installed"
+        else
+          sudo apt-get update && sudo apt-get install -y python3-pip && pip3 install bs4 requests
+        fi
+      shell: bash
+    - name: Install node dev dependencies
+      run: |
+        pnpm install --no-frozen-lockfile
+      shell: bash
+    - name: Build themes
+      run: |
+        echo Building theme for ${{ inputs.THEME_PATH }}
+        pnpm --theme=${{ inputs.THEME_PATH }} build
+      shell: bash
+    - name: Upload theme
+      run: |
+        python3 ${{ github.action_path }}/theme_uploader.py ${{ inputs.PLONE_URL }} ${{ inputs.PLONE_USERNAME }} ${{ inputs.PLONE_PASSWORD }} ${{ inputs.THEME_PATH }} theme.zip
+      shell: bash
+    - name : Send notification on Mattermost
+      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
+      uses: IMIO/gha/mattermost-notify@v3.7.2
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        MESSAGE: "Theme has been successfully uploaded to Plone site ${{ inputs.PLONE_URL }}"
+    - name : Send failure notification on Mattermost
+      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
+      uses: IMIO/gha/mattermost-notify@v3.7.2
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        MESSAGE: "An error has been encountered while uploading theme to Plone site ${{ inputs.PLONE_URL }}"

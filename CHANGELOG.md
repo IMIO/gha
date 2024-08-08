@@ -1,5 +1,9 @@
 # Changelog
 
+## [v3.8] - 2024-08-08
+### Added
+- plone-theme-build-push-notify
+
 ## [v3.7.2] - 2024-07-31
 ### Fixed
 - rundeck-notify

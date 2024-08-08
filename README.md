@@ -134,6 +134,25 @@ Test a Plone package and optionally notify via a mattermost webhook
 /
 
 ---
+### plone-theme-build-push-notify
+
+Build a theme, upload it to a plone site and optionally notify on Mattermost
+
+#### Inputs
+
+| name                   | required | type   | default      | description |
+| ---------------------- | -------- | ------ | -------------| ----------- |
+| THEME_PATH             |    yes   | string |              | Folder where theme files are located |
+| PLONE_URL              |    yes   | string |              | URL of the Plone site |
+| PLONE_USERNAME         |    yes   | string |              | Username to login to Plone |
+| PLONE_PASSWORD         |    yes   | string |              | Password to login to Plone |
+| MATTERMOST_WEBHOOK_URL |    no    | string |              | Webhook URL to send notifications on Mattermost |
+
+#### Example of usage
+
+/
+
+---
 ### rundeck-notify
 
 call a rundeck job and optionally notify via a mattermost webhook
