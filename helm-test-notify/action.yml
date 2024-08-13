@@ -23,8 +23,13 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install dependencies
-      run: sudo apt-get update && sudo apt-get install -y curl git wget
+    - name: Install packages
+      run: |
+        if which curl > /dev/null && which git > /dev/null && which wget > /dev/null; then
+          echo "Packages are already installed"
+        else
+          sudo apt-get update && sudo apt-get install -y curl git wget
+        fi
       shell: bash
     - name: Checkout
       uses: actions/checkout@v4

@@ -32,8 +32,13 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install curl and git
-      run: sudo apt-get update && sudo apt-get install -y curl git
+    - name: Install packages
+      run: |
+        if which curl > /dev/null && which git > /dev/null && which yq > /dev/null; then
+          echo "Packages are already installed"
+        else
+          sudo apt-get update && sudo apt-get install -y curl git yq
+        fi
       shell: bash
     - name: Checkout
       uses: actions/checkout@v4
@@ -49,7 +54,7 @@ runs:
     - name: Get Helm chart version
       id: get-version
       run: |
-        echo ::set-output name=version::$(yq eval '.version' ${{ inputs.CHARTS_DIR }}/Chart.yaml)
+        echo VERSION=$(yq eval '.version' ${{ inputs.CHARTS_DIR }}/Chart.yaml) >> $GITHUB_ENV
       shell: bash
     - name: Publish Helm chart
       uses: tylerauerbeck/helm-gh-pages@main
@@ -68,7 +73,7 @@ runs:
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Success : ${{ github.repository }} has published a Helm release with version ${{ steps.get-version.outputs.version }}. [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Success : ${{ github.repository }} has published a Helm release with version ${{ env.VERSION }}. [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
