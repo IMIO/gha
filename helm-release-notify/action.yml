@@ -26,6 +26,9 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Install curl and git
+      run: sudo apt-get update && sudo apt-get install -y curl git
+      shell: bash
     - name: Checkout
       uses: actions/checkout@v4
       with:
