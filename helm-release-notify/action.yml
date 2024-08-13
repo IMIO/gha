@@ -1,0 +1,75 @@
+name: Release Helm Chart and Notify
+description: Release Helm chart and notify on Mattermost
+inputs:
+  HELM_VERSION:
+    description: 'Helm version to use'
+    required: true
+    default: 'v3.12.3'
+  HELM_DEPENDENCIES:
+    description: 'Helm dependencies'
+    required: false
+  INDEX_DIR:
+    description: 'Index directory'
+    required: true
+    default: '.'
+  CHARTS_DIR:
+    description: 'Charts directory'
+    required: true
+    default: '.'
+  TARGET_DIR:
+    description: 'Target directory to release'
+    required: true
+    default: 'test'
+  MATTERMOST_WEBHOOK_URL:
+    description: 'Webhook URL to send notifications on Mattermost'
+    required: false
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - uses: actions/create-github-app-token@v1
+      id: app-token
+      with:
+        app-id: ${{ secrets.APP_ID }}
+        private-key: ${{ secrets.PRIVATE_KEY }}
+        owner: ${{ github.repository_owner }}
+        repositories: "helm-charts"
+    - name: Get Helm chart version
+      id: get-version
+      run: |
+        echo ::set-output name=version::$(yq eval '.version' ${{ inputs.CHARTS_DIR }}/Chart.yaml)
+      shell: bash
+    - name: Publish Helm chart
+      uses: tylerauerbeck/helm-gh-pages@main
+      with:
+        token: ${{ steps.app-token.outputs.token }}
+        charts_dir: ${{ inputs.CHARTS_DIR }}
+        index_dir: ${{ inputes.INDEX_DIR }}
+        charts_url: https://imio.github.io/helm-charts/
+        owner: IMIO
+        repository: helm-charts
+        branch: gh-pages
+        target_dir: ${{ inputs.TARGET_DIR }}
+        helm_version: ${{ inputs.HELM_VERSION }}
+        dependencies: ${{ inputs.HELM_DEPENDENCIES }}
+    - name : Send notification on Mattermost
+      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
+      run: |
+        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        MESSAGE="Success : ${{ github.repository }} has published a Helm release with version ${{ steps.get-version.outputs.version }}. [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+      shell: bash
+    - name : Send failure notification on Mattermost
+      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
+      env:
+        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
+        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+        NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
+      run: |
+        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        MESSAGE="Error : Helm release has failed. (Repository: ${{ github.repository }}) [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+      shell: bash

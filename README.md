@@ -5,15 +5,42 @@
 This repository hosts a set of github actions we use to deploy our apps.
 
 ## Actions
-- [build-push-notify](#build-push-notify)
-- [check-url-availibility](#check-url-availibility)
-- [code-analysis-notify](#code-analysis-notify)
-- [deb-build-push-notify](#deb-build-push-notify)
-- [mattermost-notify](#mattermost-notify)
-- [plone-package-test-notify](#plone-package-test-notify)
-- [plone-theme-build-push-notify](#plone-theme-build-push-notify)
-- [rundeck-notify](#rundeck-notify)
-- [tag-notify](#tag-notify)
+- [iMio github actions](#imio-github-actions)
+  - [Actions](#actions)
+    - [build-push-notify](#build-push-notify)
+      - [Inputs](#inputs)
+      - [Example of usage](#example-of-usage)
+    - [check-url-availibility](#check-url-availibility)
+      - [Example of usage](#example-of-usage-1)
+    - [code-analysis-notify](#code-analysis-notify)
+      - [Inputs](#inputs-1)
+      - [Example of usage](#example-of-usage-2)
+    - [deb-build-push-notify](#deb-build-push-notify)
+      - [Inputs](#inputs-2)
+      - [Example of usage](#example-of-usage-3)
+    - [helm-release-notify](#helm-release-notify)
+      - [Inputs](#inputs-3)
+      - [Example of usage](#example-of-usage-4)
+    - [helm-test-notify](#helm-test-notify)
+      - [Inputs](#inputs-4)
+      - [Example of usage](#example-of-usage-5)
+    - [mattermost-notify](#mattermost-notify)
+      - [Inputs](#inputs-5)
+      - [Example of usage](#example-of-usage-6)
+    - [plone-package-test-notify](#plone-package-test-notify)
+      - [Inputs](#inputs-6)
+      - [Example of usage](#example-of-usage-7)
+    - [plone-theme-build-push-notify](#plone-theme-build-push-notify)
+      - [Inputs](#inputs-7)
+      - [Example of usage](#example-of-usage-8)
+    - [rundeck-notify](#rundeck-notify)
+      - [Inputs](#inputs-8)
+      - [Example of usage](#example-of-usage-9)
+    - [tag-notify](#tag-notify)
+      - [Inputs](#inputs-9)
+      - [Example of usage](#example-of-usage-10)
+  - [Contribute](#contribute)
+    - [Release](#release)
 
 ### build-push-notify
 
@@ -98,6 +125,45 @@ Build a deb package, push it on a repository and optionally notify via a matterm
 #### Example of usage
 
 [IMIO/scripts-teleservices](https://github.com/IMIO/scripts-teleservices/blob/613d1563be3ddbafb3c66347022558c5dffb678c/.github/workflows/deb.yml#L20)
+
+---
+### helm-release-notify
+
+Release a helm chart and optionally notify via a mattermost webhook
+
+#### Inputs
+
+| name                   | required | type   | default         | description |
+| ---------------------- | -------- | ------ | --------------- | ----------- |
+| HELM_VERSION           |    yes   | string | "v3.12.3"       | Helm version to use |
+| HELM_DEPENDENCIES      |    no    | string |                 | Helm dependencies |
+| INDEX_DIR              |    yes   | string | "."             | Index directory |
+| CHARTS_DIR             |    yes   | string | "."             | Charts directory |
+| TARGET_DIR             |    yes   | string | "test"          | Target directory to release |
+| MATTERMOST_WEBHOOK_URL |    no    | string |                 | Webhook URL to send notifications on Mattermost |
+
+#### Example of usage
+
+/
+
+---
+### helm-test-notify
+
+Lint and test a helm chart and optionally notify via a mattermost webhook
+
+#### Inputs
+
+| name                   | required | type   | default         | description |
+| ---------------------- | -------- | ------ | --------------- | ----------- |
+| PYTHON_VERSION         |    yes   | string | "3.10"          | Python version to use |
+| HELM_VERSION           |    yes   | string | "v3.12.3"       | Helm version to use |
+| HELM_RELEASE           |    yes   | string | "test"          | Helm release name |
+| HELM_NAMESPACE         |    yes   | string | "test"          | Helm namespace name |
+| MATTERMOST_WEBHOOK_URL |    no    | string |                 | Webhook URL to send notifications on Mattermost |
+
+#### Example of usage
+
+/
 
 ---
 ### mattermost-notify

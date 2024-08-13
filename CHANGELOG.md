@@ -1,5 +1,10 @@
 # Changelog
 
+## [v3.9] - 2024-08-13
+### Added
+- helm-release-notify
+- helm-test-notify
+
 ## [v3.8] - 2024-08-08
 ### Added
 - plone-theme-build-push-notify
