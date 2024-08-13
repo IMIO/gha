@@ -4,7 +4,7 @@ inputs:
   HELM_VERSION:
     description: 'Helm version to use'
     required: true
-    default: 'v3.12.3'
+    default: '3.12.3'
   HELM_DEPENDENCIES:
     description: 'Helm dependencies'
     required: false

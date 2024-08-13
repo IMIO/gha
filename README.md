@@ -135,7 +135,7 @@ Release a helm chart and optionally notify via a mattermost webhook
 
 | name                   | required | type   | default         | description |
 | ---------------------- | -------- | ------ | --------------- | ----------- |
-| HELM_VERSION           |    yes   | string | "v3.12.3"       | Helm version to use |
+| HELM_VERSION           |    yes   | string | "3.12.3"       | Helm version to use |
 | HELM_DEPENDENCIES      |    no    | string |                 | Helm dependencies |
 | INDEX_DIR              |    yes   | string | "."             | Index directory |
 | CHARTS_DIR             |    yes   | string | "."             | Charts directory |
