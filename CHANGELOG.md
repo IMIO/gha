@@ -1,5 +1,12 @@
 # Changelog
 
+## [v3.9.2] - 2024-08-20
+### Fixed
+- helm-release-notify
+  - missing dependency
+- helm-test-notify
+  - missing dependency
+
 ## [v3.9.1] - 2024-08-20
 ### Fixed
 - helm-release-notify
