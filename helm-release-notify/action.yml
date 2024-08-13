@@ -54,7 +54,7 @@ runs:
     - name: Get Helm chart version
       id: get-version
       run: |
-        echo VERSION=$(cat ${{ inputs.CHARTS_DIR }}/Chart.yaml | grep -oP '(?<=version: ).*') >> $GITHUB_ENV
+        echo VERSION=$(cat ${{ inputs.CHARTS_DIR }}/Chart.yaml | grep -oPm 1 '(?<=version: ).*') >> $GITHUB_ENV
       shell: bash
     - name: Publish Helm chart
       uses: tylerauerbeck/helm-gh-pages@main
