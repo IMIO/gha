@@ -34,10 +34,10 @@ runs:
   steps:
     - name: Install packages
       run: |
-        if which curl > /dev/null && which git > /dev/null && which yq > /dev/null; then
+        if which curl > /dev/null && which git > /dev/null; then
           echo "Packages are already installed"
         else
-          sudo apt-get update && sudo apt-get install -y curl git yq
+          sudo apt-get update && sudo apt-get install -y curl git
         fi
       shell: bash
     - name: Checkout
@@ -54,7 +54,7 @@ runs:
     - name: Get Helm chart version
       id: get-version
       run: |
-        echo VERSION=$(yq eval '.version' ${{ inputs.CHARTS_DIR }}/Chart.yaml) >> $GITHUB_ENV
+        VERSION=$(cat ${{ inputs.CHARTS_DIR }}/Chart.yaml | grep -oP '(?<=version: ).*') >> $GITHUB_ENV
       shell: bash
     - name: Publish Helm chart
       uses: tylerauerbeck/helm-gh-pages@main
