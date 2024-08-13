@@ -54,7 +54,7 @@ runs:
     - name: Get Helm chart version
       id: get-version
       run: |
-        VERSION=$(cat ${{ inputs.CHARTS_DIR }}/Chart.yaml | grep -oP '(?<=version: ).*') >> $GITHUB_ENV
+        echo VERSION=$(cat ${{ inputs.CHARTS_DIR }}/Chart.yaml | grep -oP '(?<=version: ).*') >> $GITHUB_ENV
       shell: bash
     - name: Publish Helm chart
       uses: tylerauerbeck/helm-gh-pages@main
@@ -78,10 +78,6 @@ runs:
       shell: bash
     - name : Send failure notification on Mattermost
       if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
-        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
-        NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
         MESSAGE="Error : Helm release has failed. (Repository: ${{ github.repository }}) [Click here to see job on GitHub]($JOB_URL)"
