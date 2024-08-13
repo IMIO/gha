@@ -140,6 +140,8 @@ Release a helm chart and optionally notify via a mattermost webhook
 | INDEX_DIR              |    yes   | string | "."             | Index directory |
 | CHARTS_DIR             |    yes   | string | "."             | Charts directory |
 | TARGET_DIR             |    yes   | string | "test"          | Target directory to release |
+| APP_ID                 |    yes   | string |                 | Github App ID |
+| SECRET_KEY             |    yes   | string |                 | Github App Secret key |
 | MATTERMOST_WEBHOOK_URL |    no    | string |                 | Webhook URL to send notifications on Mattermost |
 
 #### Example of usage

@@ -20,6 +20,12 @@ inputs:
     description: 'Target directory to release'
     required: true
     default: 'test'
+  APP_ID:
+    description: 'GitHub App ID'
+    required: true
+  PRIVATE_KEY:
+    description: 'GitHub App private key'
+    required: true
   MATTERMOST_WEBHOOK_URL:
     description: 'Webhook URL to send notifications on Mattermost'
     required: false
@@ -36,8 +42,8 @@ runs:
     - uses: actions/create-github-app-token@v1
       id: app-token
       with:
-        app-id: ${{ secrets.APP_ID }}
-        private-key: ${{ secrets.PRIVATE_KEY }}
+        app-id: ${{ inputs.APP_ID }}
+        private-key: ${{ inputs.PRIVATE_KEY }}
         owner: ${{ github.repository_owner }}
         repositories: "helm-charts"
     - name: Get Helm chart version
@@ -50,7 +56,7 @@ runs:
       with:
         token: ${{ steps.app-token.outputs.token }}
         charts_dir: ${{ inputs.CHARTS_DIR }}
-        index_dir: ${{ inputes.INDEX_DIR }}
+        index_dir: ${{ inputs.INDEX_DIR }}
         charts_url: https://imio.github.io/helm-charts/
         owner: IMIO
         repository: helm-charts
