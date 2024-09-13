@@ -1,5 +1,10 @@
 # Changelog
 
+## [unreleased] - xxxx-xx-xx
+### Changed
+- code-analysis-notify
+  - use plone composite action instead of our fork
+
 ## [v3.9.3] - 2024-08-13
 ### Fixed
 - helm-release-notify
