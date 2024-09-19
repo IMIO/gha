@@ -34,7 +34,7 @@ runs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Run checks
-      uses: IMIO/gha/code-analysis-action@main
+      uses: IMIO/code-analysis-action@main
       with:
         check: ${{ inputs.CHECK }}
         path: ${{ inputs.PATH }}
