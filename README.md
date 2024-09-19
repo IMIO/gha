@@ -99,7 +99,7 @@ This github action uses the [code-analysis-action](https://github.com/plone/code
 
 #### Example of usage
 
-/
+[IMIO/imio.smartweb.core](https://github.com/IMIO/imio.smartweb.core/blob/fdb331eb004eed0744f419264f063a336b40d069/.github/workflows/plone-package-test-gha.yml#L16)
 
 ---
 ### deb-build-push-notify
@@ -201,7 +201,7 @@ Test a Plone package and optionally notify via a mattermost webhook
 
 #### Example of usage
 
-/
+[IMIO/imio.smartweb.core](https://github.com/IMIO/imio.smartweb.core/blob/fdb331eb004eed0744f419264f063a336b40d069/.github/workflows/plone-package-test-gha.yml#L33)
 
 ---
 ### plone-theme-build-push-notify
