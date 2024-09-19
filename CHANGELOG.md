@@ -1,9 +1,10 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [v3.9.4] - 2024-09-19
 ### Changed
-- code-analysis-notify
-  - use plone composite action instead of our fork
+- plone-package-test-notify
+  - More info on mattermost notification message
+  - Optional CACHE_KEY input
 
 ## [v3.9.3] - 2024-08-13
 ### Fixed

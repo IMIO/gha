@@ -192,6 +192,7 @@ Test a Plone package and optionally notify via a mattermost webhook
 
 | name                   | required | type   | default            | description |
 | ---------------------- | -------- | ------ | ------------------ | ----------- |
+| CACHE_KEY              |    no    | string |                    | key to use in actions/cache |
 | PYTHON_VERSION         |    yes   | string | "3.10"             | Python version to use |
 | TEST_COMMAND           |    yes   | string | "bin/test"         | Test command to run |
 | REQUIREMENTS_FILE      |    yes   | string | "requirements.txt" | Requirements file |
