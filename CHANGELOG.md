@@ -1,5 +1,9 @@
 # Changelog
 
+## [v3.9.5] - 2024-09-20
+### Added
+- Add gha workflow to update main release
+
 ## [v3.9.4] - 2024-09-19
 ### Changed
 - plone-package-test-notify
