@@ -12,18 +12,17 @@ jobs:
       with:
         fetch-depth: 0
     - name: Get Main version
+      id: vars
       run: |
         echo ${{ github.ref_name }}
         main_version=$(echo "v3.1.1" | cut -d '.' -f 1)
         echo "Main version: $main_version"
-        echo "::set-output name=main_version::$main_version"
+        echo "main_version=$main_version" >> "$GITHUB_OUTPUT"
         echo $main_version
     - name: Update Main version
       if: ${{ !env.ACT }} # do not run locally
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        main_version: ${{ steps.Get-Main-Version.outputs.main_version }}
-        target: ${{ github.ref_name }}
       run: |
-        git tag -f ${{ env.main_version }} ${{ env.target }}
-        git push origin ${{ env.main_version }} --force
+        git tag -f ${{ steps.vars.outputs.main_version }} ${{ github.ref_name }}
+        git push origin ${{ steps.vars.outputs.main_version }} --force
