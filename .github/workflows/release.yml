@@ -44,5 +44,5 @@ jobs:
           main_version: ${{ steps.Get-Main-Version.outputs.main_version }}
           target: ${{ github.ref_name }}
         run: |
-          gh tag -f ${{ env.main_version }} ${{ env.target }}
-          gh push origin ${{ env.main_version }} --force
+          git tag -f ${{ env.main_version }} ${{ env.target }}
+          git push origin ${{ env.main_version }} --force
