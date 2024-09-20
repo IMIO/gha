@@ -1,5 +1,11 @@
 # Changelog
 
+## [v3.9.4] - 2024-09-19
+### Changed
+- plone-package-test-notify
+  - More info on mattermost notification message
+  - Optional CACHE_KEY input
+
 ## [v3.9.3] - 2024-08-13
 ### Fixed
 - helm-release-notify

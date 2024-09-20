@@ -1,6 +1,9 @@
 name: Run code analysis
 description: Run code analysis and notify on Mattermost
 inputs:
+  CACHE_KEY:
+    description: 'Cache key'
+    required: false
   PYTHON_VERSION:
     description: 'Python version to use'
     required: true
@@ -29,13 +32,13 @@ runs:
     - name: Checkout
       uses: actions/checkout@v4
     - name: Cache eggs
+      if: ${{ inputs.CACHE_KEY != '' }}
       uses: actions/cache@v4
       env:
         cache-name: cache-eggs
       with:
         path: ./eggs
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.python-version }}
-        restore-keys: ${{ runner.os }}-build-${{ env.cache-name }}-${{ matrix.python-version }}
+        key: ${{ inputs.CACHE_KEY }}
     - name: Setup Python ${{ inputs.PYTHON_VERSION }}
       uses: actions/setup-python@v5.1.1
       with:
@@ -56,7 +59,7 @@ runs:
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Test has run successfully. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Test has run successfully. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}, Test command: ${{ inputs.TEST_COMMAND }}, Python version: ${{ inputs.PYTHON_VERSION }}) [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
@@ -67,6 +70,6 @@ runs:
         NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : Test has failed. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Error : Test has failed. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}, Test command: ${{ inputs.TEST_COMMAND }}, Python version: ${{ inputs.PYTHON_VERSION }}) [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash

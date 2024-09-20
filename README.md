@@ -99,7 +99,7 @@ This github action uses the [code-analysis-action](https://github.com/plone/code
 
 #### Example of usage
 
-/
+[IMIO/imio.smartweb.core](https://github.com/IMIO/imio.smartweb.core/blob/fdb331eb004eed0744f419264f063a336b40d069/.github/workflows/plone-package-test-gha.yml#L16)
 
 ---
 ### deb-build-push-notify
@@ -192,6 +192,7 @@ Test a Plone package and optionally notify via a mattermost webhook
 
 | name                   | required | type   | default            | description |
 | ---------------------- | -------- | ------ | ------------------ | ----------- |
+| CACHE_KEY              |    no    | string |                    | key to use in actions/cache |
 | PYTHON_VERSION         |    yes   | string | "3.10"             | Python version to use |
 | TEST_COMMAND           |    yes   | string | "bin/test"         | Test command to run |
 | REQUIREMENTS_FILE      |    yes   | string | "requirements.txt" | Requirements file |
@@ -200,7 +201,7 @@ Test a Plone package and optionally notify via a mattermost webhook
 
 #### Example of usage
 
-/
+[IMIO/imio.smartweb.core](https://github.com/IMIO/imio.smartweb.core/blob/fdb331eb004eed0744f419264f063a336b40d069/.github/workflows/plone-package-test-gha.yml#L33)
 
 ---
 ### plone-theme-build-push-notify
