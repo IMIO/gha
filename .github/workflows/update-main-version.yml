@@ -1,0 +1,27 @@
+name: Update Main Version
+run-name: Move ${{ github.event.inputs.major_version }} to ${{ github.event.inputs.target }}
+
+on:
+  workflow_dispatch:
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4.1.6
+      with:
+        fetch-depth: 0
+    - name: Get Main version
+      run: |
+        main_version=$(echo ${{ github.ref_name }} | cut -d '.' -f 1)
+        echo "Main version: $main_version"
+        echo "::set-output name=main_version::$main_version"
+    - name: Update Main version
+      if: ${{ !env.ACT }} # do not run locally
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        main_version: ${{ steps.Get-Main-Version.outputs.main_version }}
+        target: ${{ github.ref_name }}
+      run: |
+        gh tag -f ${{ env.main_version }} ${{ env.target }}
+        gh push origin ${{ env.main_version }} --force
