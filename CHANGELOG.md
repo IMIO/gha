@@ -1,9 +1,9 @@
 # Changelog
 
 ## [unreleased] - xxxx-xx-xx
-### Added
+### Changed
 - plone-package-test-notify
-  - Python 2 compatibility
+  - Do not install Python if PYTHON_VERSION is not specified
 
 ## [v3.9.6] - 2024-09-26
 ### Changed
