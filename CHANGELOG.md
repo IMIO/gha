@@ -1,10 +1,5 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
-### Added
-- plone-package-test-notify
-  - Python 2 compatibility
-
 ## [v3.9.6] - 2024-09-26
 ### Changed
 - code-analysis-notify
