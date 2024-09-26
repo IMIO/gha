@@ -44,7 +44,7 @@ runs:
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="code analysis has run successfully. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Code analysis has run successfully. ([Repository: ${{ github.repository }}](${{ github.server_url }}/${{ github.repository }}), Branch: ${{ github.ref_name }}, [View commit on GitHub](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})) [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
@@ -55,6 +55,6 @@ runs:
         NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : code analysis has failed. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Error : code analysis has failed. ([Repository: ${{ github.repository }}](${{ github.server_url }}/${{ github.repository }}), Branch: ${{ github.ref_name }}, [View commit on GitHub](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})) [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash

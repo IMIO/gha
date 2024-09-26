@@ -1,5 +1,12 @@
 # Changelog
 
+## [unreleased] - xxxx-xx-xx
+### Changed
+- code-analysis-notify
+  - Hyperlinks to GitHub on mattermost notification message
+- plone-package-test-notify
+  - Hyperlinks to GitHub on mattermost notification message
+
 ## [v3.9.5] - 2024-09-20
 ### Added
 - Add gha workflow to update main release
