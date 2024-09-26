@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [v3.9.6] - 2024-09-26
 ### Changed
 - code-analysis-notify
   - Hyperlinks to GitHub on mattermost notification message
