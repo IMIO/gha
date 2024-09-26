@@ -59,7 +59,7 @@ runs:
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Test has run successfully. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}, Test command: ${{ inputs.TEST_COMMAND }}, Python version: ${{ inputs.PYTHON_VERSION }}) [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Test has run successfully. ([Repository: ${{ github.repository }}](${{ github.server_url }}/${{ github.repository }}), Branch: ${{ github.ref_name }}, [View commit on GitHub](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}), Test command: ${{ inputs.TEST_COMMAND }}, Python version: ${{ inputs.PYTHON_VERSION }}) [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
     - name : Send failure notification on Mattermost
@@ -70,6 +70,6 @@ runs:
         NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : Test has failed. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}, Test command: ${{ inputs.TEST_COMMAND }}, Python version: ${{ inputs.PYTHON_VERSION }}) [Click here to see job on GitHub]($JOB_URL)"
+        MESSAGE="Error : Test has failed. ([Repository: ${{ github.repository }}](${{ github.server_url }}/${{ github.repository }}), Branch: ${{ github.ref_name }}, [View commit on GitHub](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}), Test command: ${{ inputs.TEST_COMMAND }}, Python version: ${{ inputs.PYTHON_VERSION }}) [Click here to see job on GitHub]($JOB_URL)"
         curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       shell: bash
