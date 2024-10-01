@@ -43,10 +43,6 @@ runs:
       uses: actions/setup-python@v5.1.1
       with:
         python-version: ${{ inputs.PYTHON_VERSION }}
-    - name : Export path
-      run: |
-        echo /home/runner/.local/bin >> $GITHUB_PATH
-      shell: bash
     - name: Install dependencies
       shell: bash
       run: |
