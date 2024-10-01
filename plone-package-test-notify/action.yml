@@ -1,27 +1,27 @@
 name: Run code analysis
 description: Run code analysis and notify on Mattermost
 inputs:
-  CACHE_KEY:
-    description: 'Cache key'
-    required: false
-  PYTHON_VERSION:
-    description: 'Python version to use'
-    required: false
-  TEST_COMMAND:
-    description: 'Command to run tests'
-    required: true
-    default: "bin/test"
-  REQUIREMENTS_FILE:
-    description: 'Path to requirements file'
-    required: true
-    default: "requirements.txt"
   BUILDOUT_CONFIG_FILE:
     description: 'Path to buildout configuration file'
     required: true
     default: "buildout.cfg"
+  CACHE_KEY:
+    description: 'Cache key'
+    required: false
   MATTERMOST_WEBHOOK_URL:
     description: 'Webhook URL to send notifications on Mattermost, if not provided, notifications will not be sent'
     required: false
+  PYTHON_VERSION:
+    description: 'Python version to use'
+    required: false
+  REQUIREMENTS_FILE:
+    description: 'Path to requirements file'
+    required: true
+    default: "requirements.txt"
+  TEST_COMMAND:
+    description: 'Command to run tests'
+    required: true
+    default: "bin/test"
 runs:
   using: 'composite'
   steps:
