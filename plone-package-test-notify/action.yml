@@ -25,8 +25,13 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install curl
-      run: sudo apt-get update && sudo apt-get install -y curl git
+    - name: Install curl and git
+      run: |
+        if which curl > /dev/null && which git > /dev/null; then
+          echo "curl and git are already installed"
+        else
+          sudo apt-get update && sudo apt-get install -y curl git
+        fi
       shell: bash
     - name: Checkout
       uses: actions/checkout@v4
