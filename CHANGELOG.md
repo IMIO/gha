@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [v4.0.0] - 2024-10-01
 ### Changed
 - plone-package-test-notify
   - Do not install Python if PYTHON_VERSION is not specified
