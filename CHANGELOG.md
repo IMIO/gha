@@ -4,6 +4,9 @@
 ### Changed
 - plone-package-test-notify
   - Do not install Python if PYTHON_VERSION is not specified
+- plone-package-test-notify (**breaking change**)
+  - Removed REQUIREMENTS_FILE input
+  - Added INSTALL_DEPENDENCIES_COMMANDS input
 
 ## [v3.9.6] - 2024-09-26
 ### Changed

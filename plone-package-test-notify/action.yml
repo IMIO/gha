@@ -8,16 +8,15 @@ inputs:
   CACHE_KEY:
     description: 'Cache key'
     required: false
+  INSTALL_DEPENDENCIES_COMMANDS:
+    description: 'Commands to install dependencies'
+    required: false
   MATTERMOST_WEBHOOK_URL:
     description: 'Webhook URL to send notifications on Mattermost, if not provided, notifications will not be sent'
     required: false
   PYTHON_VERSION:
     description: 'Python version to use'
     required: false
-  REQUIREMENTS_FILE:
-    description: 'Path to requirements file'
-    required: true
-    default: "requirements.txt"
   TEST_COMMAND:
     description: 'Command to run tests'
     required: true
@@ -49,9 +48,15 @@ runs:
       with:
         python-version: ${{ inputs.PYTHON_VERSION }}
     - name: Install dependencies
+      if: ${{ inputs.INSTALL_DEPENDENCIES_COMMANDS != '' }}
       shell: bash
       run: |
-        pip install -r ${{ inputs.REQUIREMENTS_FILE }}
+        set +e
+        IFS=$'\n' read -r -d '' -a commands <<< "${{ inputs.INSTALL_DEPENDENCIES_COMMANDS }}"
+        for command in "${commands[@]}"; do
+          echo "Running command: $command"
+          $command
+        done
     - name: Run buildout
       shell: bash
       run: |
