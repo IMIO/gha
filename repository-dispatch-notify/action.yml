@@ -14,9 +14,6 @@ inputs:
   EVENT_TYPE:
     description: 'Type of event to trigger'
     required: true
-  CLIENT_PAYLOAD:
-    description: 'Client payload to send with the event'
-    required: false
   APP_ID:
     description: 'GitHub App ID'
     required: true

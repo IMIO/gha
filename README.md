@@ -236,7 +236,6 @@ Trigger a repository dispatch event and optionally notify on Mattermost
 | GIT_REFERENCE          |    no    | string | "main"          | Reference to trigger the event on |
 | REPOSITORY_OWNER       |    yes   | string |                 | Repository owner |
 | WORKFLOW_FILENAME      |    yes   | string |                 | Filename of the workflow to trigger |
-| CLIENT_PAYLOAD         |    no    | string |                 | Client payload to send with the event |
 | APP_ID                 |    yes   | string |                 | GitHub App ID |
 | APP_PRIVATE_KEY        |    yes   | string |                 | GitHub App private key |
 | MATTERMOST_WEBHOOK_URL |    no    | string |                 | Webhook URL to send notifications on Mattermost |

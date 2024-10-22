@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [v4.1] - 2024-10-22
 ### Added
 - repository-dispatch-notify
 
