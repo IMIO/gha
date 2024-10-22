@@ -1,5 +1,14 @@
 # Changelog
 
+## [unreleased] - xxxx-xx-xx
+
+
+## [v4.0.1] - 2024-10-22
+### Fixed
+- plone-package-test-notify
+  - cleanup useless environment variables
+  - escape command on notification message
+
 ## [v4.0.0] - 2024-10-01
 ### Changed
 - plone-package-test-notify
