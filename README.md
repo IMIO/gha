@@ -224,6 +224,27 @@ Build a theme, upload it to a plone site and optionally notify on Mattermost
 [IMIO/imio_smartweb_themes](https://github.com/IMIO/imio_smartweb_themes/blob/2268e1ee7350214b7fe7e98c4353622a61c3250a/.github/workflows/build-upload.yml#L117)
 
 ---
+### repository-dispatch-notify
+
+Trigger a repository dispatch event and optionally notify on Mattermost
+
+#### Inputs
+
+| name                   | required | type   | default         | description |
+| ---------------------- | -------- | ------ | --------------- | ----------- |
+| REPOSITORY             |    yes   | string |                 | Repository to trigger the dispatch event |
+| REPOSITORY_OWNER       |    yes   | string |                 | Repository owner |
+| EVENT_TYPE             |    yes   | string |                 | Type of event to trigger |
+| CLIENT_PAYLOAD         |    no    | string |                 | Client payload to send with the event |
+| APP_ID                 |    yes   | string |                 | GitHub App ID |
+| APP_PRIVATE_KEY        |    yes   | string |                 | GitHub App private key |
+| MATTERMOST_WEBHOOK_URL |    no    | string |                 | Webhook URL to send notifications on Mattermost |
+
+#### Example of usage
+
+/
+
+---
 ### rundeck-notify
 
 call a rundeck job and optionally notify via a mattermost webhook
