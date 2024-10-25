@@ -59,10 +59,10 @@ runs:
     uses: IMIO/gha/mattermost-notify@v4
     with:
       MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-      MESSAGE: "Theme has been successfully uploaded to Plone site ${{ inputs.PLONE_URL }}"
+      MESSAGE: "Repository dispatch event triggered on repository ${{ inputs.REPOSITORY }}"
   - name : Send failure notification on Mattermost
     if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
     uses: IMIO/gha/mattermost-notify@v4
     with:
       MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-      MESSAGE: "An error has been encountered while uploading theme to Plone site ${{ inputs.PLONE_URL }}"
+      MESSAGE: "An error has been encountered while dispatching the event on repository ${{ inputs.REPOSITORY }}"
