@@ -234,6 +234,7 @@ Trigger a repository dispatch event and optionally notify on Mattermost
 | ---------------------- | -------- | ------ | --------------- | ----------- |
 | REPOSITORY             |    yes   | string |                 | Repository to trigger the dispatch event |
 | GIT_REFERENCE          |    no    | string | "main"          | Reference to trigger the event on |
+| INPUTS                 |    no    | string | "{}"            | Inputs to pass to the workflow, Exemple : {"input1":"abc", "input2":"abc"} |
 | REPOSITORY_OWNER       |    yes   | string |                 | Repository owner |
 | WORKFLOW_FILENAME      |    yes   | string |                 | Filename of the workflow to trigger |
 | APP_ID                 |    yes   | string |                 | GitHub App ID |
