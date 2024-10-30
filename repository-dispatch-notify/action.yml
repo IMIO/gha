@@ -11,9 +11,6 @@ inputs:
   WORKFLOW_FILENAME:
     description: 'Filename of the workflow to trigger'
     required: true
-  EVENT_TYPE:
-    description: 'Type of event to trigger'
-    required: true
   APP_ID:
     description: 'GitHub App ID'
     required: true
