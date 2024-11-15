@@ -1,5 +1,14 @@
 # Changelog
 
+## [v4.1.1] - 2024-11-15
+### Changed
+- repository-dispatch-notify
+  - allow to pass inputs on workflow dispatch event call
+### Fixed
+- repository-dispatch-notify
+  - inputs escape
+  - remove obsolete input
+
 ## [v4.1] - 2024-10-22
 ### Added
 - repository-dispatch-notify
