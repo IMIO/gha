@@ -10,13 +10,13 @@ on:
       python_version:
         description: 'Python version'
         required: false
-        type: array
-        default: ["2.7"]
+        type: string
+        default: "2.7"
       plone_version:
         description: 'Plone version'
         required: false
-        type: array
-        default: ["4.3"]
+        type: string
+        default: "4.3"
       matrix_experimental:
         description: 'Experimental matrix'
         type: boolean
