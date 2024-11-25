@@ -10,10 +10,12 @@ on:
       python_version:
         description: 'Python version'
         required: false
+        type: array
         default: ["2.7"]
       plone_version:
         description: 'Plone version'
         required: false
+        type: array
         default: ["4.3"]
       matrix_experimental:
         description: 'Experimental matrix'
@@ -28,14 +30,17 @@ on:
       soffice:
         description: 'Launch soffice'
         required: false
+        type: boolean
         default: true
       test_command:
         description: 'Test command'
         required: false
+        type: string
         default: 'bin/test'
       install_dependencies_commands:
         description: 'Install dependencies commands'
         required: false
+        type: string
         default: 'sudo pip install -r requirements-tests.txt'
     secrets:
         mattermost_webhook_url:
