@@ -51,15 +51,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Parse versions
+        id: set-matrix
+        run: |
+          IFS=',' read -r -a python_versions <<< "${{ inputs.python_version }}"
+          python_versions_json=$(printf '%s\n' "${python_versions[@]}" | jq -R . | jq -s .)
+
+          IFS=',' read -r -a plone_versions <<< "${{ inputs.plone_version }}"
+          plone_versions_json=$(printf '%s\n' "${plone_versions[@]}" | jq -R . | jq -s .)
+
+          echo "matrix={\"python\": $python_versions_json, \"plone\": $plone_versions_json}" >> $GITHUB_ENV
+          echo "::set-output name=matrix::{\"python\": $python_versions_json, \"plone\": $plone_versions_json}"
   test:
+    needs: generate-matrix
     runs-on: ${{ inputs.runner_label }}
     continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
-      matrix:
-        python-version: ${{ inputs.python_version }}
-        plone-version: ${{ inputs.plone_version }}
-        experimental: ${{ inputs.matrix_experimental }}
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
     if: ${{ !github.event_name == 'pull_request' || !github.event.pull_request.draft }}
     steps:
       - name: Launch soffice
