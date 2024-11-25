@@ -5,6 +5,7 @@ on:
     inputs:
       branch_name:
         description: 'Branch name'
+        type: string
         required: false
       python_version:
         description: 'Python version'
@@ -16,10 +17,12 @@ on:
         default: ["4.3"]
       matrix_experimental:
         description: 'Experimental matrix'
+        type: boolean
         required: false
         default: false
       runner_label:
         description: 'Runner label'
+        type: string
         required: false
         default: "gha-runners-delib-py2"
       soffice:
