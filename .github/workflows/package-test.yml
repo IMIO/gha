@@ -60,9 +60,11 @@ jobs:
         id: set-matrix
         run: |
           IFS=',' read -r -a python_versions <<< "${{ inputs.python_version }}"
+          python_versions=("${python_versions[@]// /}")
           python_versions_json=$(printf '%s\n' "${python_versions[@]}" | jq -R . | jq -s .)
 
           IFS=',' read -r -a plone_versions <<< "${{ inputs.plone_version }}"
+          plone_versions=("${plone_versions[@]// /}")
           plone_versions_json=$(printf '%s\n' "${plone_versions[@]}" | jq -R . | jq -s .)
 
           echo "matrix={\"python\": $python_versions_json, \"plone\": $plone_versions_json}" >> $GITHUB_ENV
