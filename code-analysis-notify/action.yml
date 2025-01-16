@@ -9,6 +9,14 @@ inputs:
     description: 'Check to be used'
     required: false
     default: ""
+  DOCKER_USERNAME:
+    description: 'Docker username'
+    required: false
+    default: ""
+  DOCKER_PASSWORD:
+    description: 'Docker password'
+    required: false
+    default: ""
   PATH:
     description: 'Paths to be checked'
     required: false
@@ -40,6 +48,8 @@ runs:
         path: ${{ inputs.PATH }}
         base_dir: ${{ inputs.BASE_DIR }}
         log_level: ${{ inputs.LOG_LEVEL }}
+        docker_username: ${{ inputs.DOCKER_USERNAME }}
+        docker_password: ${{ inputs.DOCKER_PASSWORD }}
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       run: |
