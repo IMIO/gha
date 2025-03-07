@@ -8,6 +8,10 @@ inputs:
   CACHE_KEY:
     description: 'Cache key'
     required: false
+  EGG_PATH:
+    description: 'Path to eggs directory'
+    required: true
+    default: "./eggs"
   INSTALL_DEPENDENCIES_COMMANDS:
     description: 'Commands to install dependencies'
     required: false
@@ -40,7 +44,7 @@ runs:
       env:
         cache-name: cache-eggs
       with:
-        path: ./eggs
+        path: ${{ inputs.EGG_PATH }}
         key: ${{ inputs.CACHE_KEY }}
     - name: Setup Python
       if: ${{ inputs.PYTHON_VERSION != '' }}
@@ -60,7 +64,7 @@ runs:
     - name: Run buildout
       shell: bash
       run: |
-        buildout -c ${{ inputs.BUILDOUT_CONFIG_FILE }} buildout:eggs-directory=./eggs
+        buildout -c ${{ inputs.BUILDOUT_CONFIG_FILE }} buildout:eggs-directory=${{ inputs.EGG_PATH }}
     - name: Run tests
       shell: bash
       run: |
