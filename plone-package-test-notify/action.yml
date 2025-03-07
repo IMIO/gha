@@ -8,7 +8,7 @@ inputs:
   CACHE_KEY:
     description: 'Cache key'
     required: false
-  EGG_PATH:
+  EGGS_PATH:
     description: 'Path to eggs directory'
     required: true
     default: "./eggs"
@@ -44,7 +44,7 @@ runs:
       env:
         cache-name: cache-eggs
       with:
-        path: ${{ inputs.EGG_PATH }}
+        path: ${{ inputs.EGGS_PATH }}
         key: ${{ inputs.CACHE_KEY }}
     - name: Setup Python
       if: ${{ inputs.PYTHON_VERSION != '' }}
@@ -64,7 +64,7 @@ runs:
     - name: Run buildout
       shell: bash
       run: |
-        buildout -c ${{ inputs.BUILDOUT_CONFIG_FILE }} buildout:eggs-directory=${{ inputs.EGG_PATH }}
+        buildout -c ${{ inputs.BUILDOUT_CONFIG_FILE }} buildout:eggs-directory=${{ inputs.EGGS_PATH }}
     - name: Run tests
       shell: bash
       run: |
