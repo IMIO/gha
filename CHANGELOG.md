@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [v5.0.0] - 2025-06-18
 ### Changed
 - plone-package-test-notify (**breaking change**)
   - install python with uv (only compatible with Python 3, if you still need Python 2, use v4)
