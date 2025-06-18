@@ -53,8 +53,6 @@ runs:
         key: ${{ inputs.CACHE_KEY }}
     - name: Install uv and set the python version
       uses: astral-sh/setup-uv@v6
-      env:
-        UV_MANAGED_PYTHON: 1
       with:
         python-version: ${{ inputs.PYTHON_VERSION }}
         version: ${{ inputs.UV_VERSION }}

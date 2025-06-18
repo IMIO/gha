@@ -1,5 +1,12 @@
 # Changelog
 
+## [unreleased] - xxxx-xx-xx
+### Changed
+- plone-package-test-notify (**breaking change**)
+  - install python with uv (only compatible with Python 3, if you still need Python 2, use v4)
+    - Added BUILDOUT_COMMAND input
+    - Added UV_VERSION input
+
 ## [v4.1.1] - 2024-11-15
 ### Changed
 - repository-dispatch-notify

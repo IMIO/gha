@@ -188,6 +188,9 @@ Send a notification on a Mattermost webhook
 
 Test a Plone package and optionally notify via a mattermost webhook
 
+> [!WARNING] 
+> Python 2 support has been dropped in v5. If you still need it, use v4
+
 #### Inputs
 
 | name                          | required | type   | default            | description |
