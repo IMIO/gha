@@ -296,13 +296,18 @@ Add tags to a docker image and optionally notify via a mattermost webhook
 A new release is issued when a tag beginning with v is pushed.
 The main release (for instance v3) will also be updated with the latest tag.
 
-The release note is auto populated with the "[tag]" part of the CHANGELOG.md .
+The release note is automatically populated using the "[tag]" section from the CHANGELOG.md .
 
-[See CHANGELOG.md file for an example](https://github.com/IMIO/gha/blob/66f298e6e5081e5e917df21e1036c6fa52246a8d/CHANGELOG.md?plain=1#L3)
+[See the CHANGELOG.md file for an example](https://github.com/IMIO/gha/blob/66f298e6e5081e5e917df21e1036c6fa52246a8d/CHANGELOG.md?plain=1#L3)
 
-You can push a tag this way :
+Typically, you will first update the changelog ([Example commit](https://github.com/IMIO/gha/commit/edb3c35ac9eac8b489d1a41972ee74f930859d31)).
 
-```
-git tag -a -m 'release v3.4' v3.4
+Then, you will push the tags.
+
+
+```bash
+git add CHANGELOG.md
+git commit -m 'doc: Release v5.0.0'
+git tag -a -m 'release v5.0.0' v5.0.0
 git push --follow-tags
 ```
