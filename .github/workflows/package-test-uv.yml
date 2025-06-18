@@ -3,10 +3,15 @@ name: Test package
 on:
   workflow_call:
     inputs:
+      buildout_command:
+        description: 'Command to run buildout'
+        type: string
+        required: true
+        default: ".venv/bin/buildout"
       buildout_config_file:
         description: 'Buildout configuration file'
         type: string
-        required: false
+        required: true
         default: "buildout.cfg"
       buildout_options:
         description: 'Options to pass to buildout'
@@ -18,11 +23,6 @@ on:
         type: boolean
         required: false
         default: false
-      install_dependencies_commands:
-        description: 'Install dependencies commands'
-        required: false
-        type: string
-        default: 'sudo pip install -r requirements-tests.txt'
       matrix_experimental:
         description: 'Experimental matrix'
         type: boolean
@@ -68,14 +68,16 @@ jobs:
         run: soffice '--accept=socket,host=0.0.0.0,port=2002;urp;StarOffice.ServiceManager' --nologo --headless --nofirststartwizard --norestore &
         shell: bash
       - name: Run tests
-        uses: IMIO/gha/plone-package-test-notify@v4
+        uses: IMIO/gha/plone-package-test-notify@reusable-workflows
         env:
           cache-name: cache-eggs
         with:
+          BUILDOUT_COMMAND: ${{ inputs.buildout_command }}
           BUILDOUT_CONFIG_FILE: ${{ inputs.buildout_config_file }}
           CACHE_KEY: ${{ runner.os }}-build-${{ env.cache-name }}-${{ inputs.python_version }}
           INSTALL_DEPENDENCIES_COMMANDS: |
-            ${{ inputs.install_dependencies_commands }}
+            uv venv --python ${{ inputs.python_version }} .managed-python
+            uv pip install -r https://dist.plone.org/release/${{ inputs.plone_version }}/requirements.txt
           MATTERMOST_WEBHOOK_URL: ${{ secrets.mattermost_webhook_url }}
           PYTHON_VERSION: ${{ inputs.python_version }}
           TEST_COMMAND: ${{ inputs.test_command }}
