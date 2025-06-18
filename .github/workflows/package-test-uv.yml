@@ -76,7 +76,7 @@ jobs:
           BUILDOUT_CONFIG_FILE: ${{ inputs.buildout_config_file }}
           CACHE_KEY: ${{ runner.os }}-build-${{ env.cache-name }}-${{ inputs.python_version }}
           INSTALL_DEPENDENCIES_COMMANDS: |
-            uv venv --python ${{ inputs.python_version }} .managed-python
+            uv venv --python ${{ inputs.python_version }} --managed-python
             uv pip install -r https://dist.plone.org/release/${{ inputs.plone_version }}/requirements.txt
           MATTERMOST_WEBHOOK_URL: ${{ secrets.mattermost_webhook_url }}
           PYTHON_VERSION: ${{ inputs.python_version }}
