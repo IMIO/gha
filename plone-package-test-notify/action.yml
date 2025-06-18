@@ -1,6 +1,10 @@
 name: Run code analysis
 description: Run code analysis and notify on Mattermost
 inputs:
+  BUILDOUT_COMMAND:
+    description: 'Command to run buildout'
+    required: true
+    default: "buildout"
   BUILDOUT_CONFIG_FILE:
     description: 'Path to buildout configuration file'
     required: true
@@ -60,7 +64,7 @@ runs:
     - name: Run buildout
       shell: bash
       run: |
-        buildout -c ${{ inputs.BUILDOUT_CONFIG_FILE }} buildout:eggs-directory=./eggs
+        ${{ inputs.BUILDOUT_COMMAND }} -c ${{ inputs.BUILDOUT_CONFIG_FILE }} buildout:eggs-directory=./eggs
     - name: Run tests
       shell: bash
       run: |
