@@ -9,6 +9,10 @@ inputs:
     description: 'Path to buildout configuration file'
     required: true
     default: "buildout.cfg"
+  BUILDOUT_OPTIONS:
+    description: 'Options to pass to buildout'
+    required: false
+    default: ""
   CACHE_KEY:
     description: 'Cache key'
     required: false

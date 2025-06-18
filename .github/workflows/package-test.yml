@@ -8,6 +8,11 @@ on:
         type: string
         required: false
         default: "buildout.cfg"
+      buildout_options:
+        description: 'Options to pass to buildout'
+        type: string
+        required: false
+        default: ""
       continue_on_error:
         description: 'Continue on error'
         type: boolean
@@ -23,6 +28,11 @@ on:
         type: boolean
         required: false
         default: false
+      plone_version:
+        description: 'Plone version'
+        type: string
+        required: false
+        default: "6.1.1"
       python_version:
         description: 'Python version'
         required: false
@@ -31,8 +41,7 @@ on:
       runner_label:
         description: 'Runner label'
         type: string
-        required: false
-        default: "gha-runners-delib-py2"
+        required: true
       soffice:
         description: 'Launch soffice'
         required: false
