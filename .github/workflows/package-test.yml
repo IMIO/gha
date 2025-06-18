@@ -3,25 +3,31 @@ name: Test package
 on:
   workflow_call:
     inputs:
-      branch_name:
-        description: 'Branch name'
+      buildout_config_file:
+        description: 'Buildout configuration file'
         type: string
         required: false
-      python_version:
-        description: 'Python version'
+        default: "buildout.cfg"
+      continue_on_error:
+        description: 'Continue on error'
+        type: boolean
+        required: false
+        default: false
+      install_dependencies_commands:
+        description: 'Install dependencies commands'
         required: false
         type: string
-        default: "2.7"
-      plone_version:
-        description: 'Plone version'
-        required: false
-        type: string
-        default: "4.3"
+        default: 'sudo pip install -r requirements-tests.txt'
       matrix_experimental:
         description: 'Experimental matrix'
         type: boolean
         required: false
         default: false
+      python_version:
+        description: 'Python version'
+        required: false
+        type: string
+        default: "3.13"
       runner_label:
         description: 'Runner label'
         type: string
@@ -37,11 +43,6 @@ on:
         required: false
         type: string
         default: 'bin/test'
-      install_dependencies_commands:
-        description: 'Install dependencies commands'
-        required: false
-        type: string
-        default: 'sudo pip install -r requirements-tests.txt'
     secrets:
         mattermost_webhook_url:
           description: 'Webhook URL to send notifications on Mattermost, if not provided, notifications will not be sent'
@@ -50,7 +51,7 @@ on:
 jobs:
   test:
     runs-on: ${{ inputs.runner_label }}
-    continue-on-error: false
+    continue-on-error: ${{ inputs.continue_on_error }}
     if: ${{ !github.event_name == 'pull_request' || !github.event.pull_request.draft }}
     steps:
       - name: Launch soffice
@@ -61,10 +62,11 @@ jobs:
         uses: IMIO/gha/plone-package-test-notify@v4
         env:
           cache-name: cache-eggs
-          PM_BRANCH_NAME: ${{ inputs.branch_name || 'master' }}
         with:
+          BUILDOUT_CONFIG_FILE: ${{ inputs.buildout_config_file }}
           CACHE_KEY: ${{ runner.os }}-build-${{ env.cache-name }}-${{ inputs.python_version }}
-          TEST_COMMAND: ${{ inputs.test_command }}
           INSTALL_DEPENDENCIES_COMMANDS: |
             ${{ inputs.install_dependencies_commands }}
           MATTERMOST_WEBHOOK_URL: ${{ secrets.mattermost_webhook_url }}
+          PYTHON_VERSION: ${{ inputs.python_version }}
+          TEST_COMMAND: ${{ inputs.test_command }}
