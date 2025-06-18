@@ -192,13 +192,14 @@ Test a Plone package and optionally notify via a mattermost webhook
 
 | name                          | required | type   | default            | description |
 | ----------------------------- | -------- | ------ | ------------------ | ----------- |
-| CACHE_KEY                     |    no    | string |                    | key to use in actions/cache |
-| PYTHON_VERSION                |    no    | string |                    | Python version to use |
-| TEST_COMMAND                  |    yes   | string | "bin/test"         | Test command to run |
-| REQUIREMENTS_FILE             |    yes   | string | "requirements.txt" | Requirements file |
+| BUILDOUT_COMMAND              |    yes   | string | "buildout"         | Command to run buildout |
 | BUILDOUT_CONFIG_FILE          |    yes   | string | "buildout.cfg"     | Buildout config file |
-| MATTERMOST_WEBHOOK_URL        |    no    | string |                    | Webhook URL to send notifications on Mattermost |
+| CACHE_KEY                     |    no    | string |                    | key to use in actions/cache |
 | INSTALL_DEPENDENCIES_COMMANDS |    no    | string |                    | Install dependencies commands (one per line) |
+| MATTERMOST_WEBHOOK_URL        |    no    | string |                    | Webhook URL to send notifications on Mattermost |
+| PYTHON_VERSION                |    yes   | string | "3.13"             | Python version to use |
+| TEST_COMMAND                  |    yes   | string | "bin/test"         | Test command to run |
+| UV_VERSION                    |    yes   | string | "0.7.13"           | uv version to use |
 
 #### Example of usage
 
