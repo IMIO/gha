@@ -20,11 +20,16 @@ inputs:
     required: false
   PYTHON_VERSION:
     description: 'Python version to use'
-    required: false
+    required: true
+    default: "3.13"
   TEST_COMMAND:
     description: 'Command to run tests'
     required: true
     default: "bin/test"
+  UV_VERSION:
+    description: 'Version of uv to use'
+    required: true
+    default: "0.7.13"
 runs:
   using: 'composite'
   steps:
@@ -47,10 +52,12 @@ runs:
         path: ./eggs
         key: ${{ inputs.CACHE_KEY }}
     - name: Install uv and set the python version
-      if: ${{ inputs.PYTHON_VERSION != '' }}
       uses: astral-sh/setup-uv@v6
+      env:
+        UV_MANAGED_PYTHON: 'true'
       with:
         python-version: ${{ inputs.PYTHON_VERSION }}
+        version: ${{ inputs.UV_VERSION }}
     - name: Install dependencies
       if: ${{ inputs.INSTALL_DEPENDENCIES_COMMANDS != '' }}
       shell: bash
