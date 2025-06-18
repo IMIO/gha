@@ -73,7 +73,7 @@ runs:
     - name: Run buildout
       shell: bash
       run: |
-        ${{ inputs.BUILDOUT_COMMAND }} -c ${{ inputs.BUILDOUT_CONFIG_FILE }} ${{ inputs.BUILDOUT_OPTIONS }} buildout:eggs-directory=./eggs
+        ${{ inputs.BUILDOUT_COMMAND }} ${{ inputs.BUILDOUT_OPTIONS }} -c ${{ inputs.BUILDOUT_CONFIG_FILE }} buildout:eggs-directory=./eggs
     - name: Run tests
       shell: bash
       run: |
