@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - xxxx-xx-xx
+## [v5.0.1] - 2025-07-17
 ### Changed
 - plone-package-test-notify
   - Added optional BUILDOUT_OPTIONS input
