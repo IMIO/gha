@@ -197,6 +197,7 @@ Test a Plone package and optionally notify via a mattermost webhook
 | ----------------------------- | -------- | ------ | ------------------ | ----------- |
 | BUILDOUT_COMMAND              |    yes   | string | "buildout"         | Command to run buildout |
 | BUILDOUT_CONFIG_FILE          |    yes   | string | "buildout.cfg"     | Buildout config file |
+| BUILDOUT_OPTIONS              |    no    | string |                    | Options to pass to buildout |
 | CACHE_KEY                     |    no    | string |                    | key to use in actions/cache |
 | INSTALL_DEPENDENCIES_COMMANDS |    no    | string |                    | Install dependencies commands (one per line) |
 | MATTERMOST_WEBHOOK_URL        |    no    | string |                    | Webhook URL to send notifications on Mattermost |

@@ -9,6 +9,10 @@ inputs:
     description: 'Path to buildout configuration file'
     required: true
     default: "buildout.cfg"
+  BUILDOUT_OPTIONS:
+    description: 'Options to pass to buildout'
+    required: false
+    default: ""
   CACHE_KEY:
     description: 'Cache key'
     required: false
@@ -69,7 +73,7 @@ runs:
     - name: Run buildout
       shell: bash
       run: |
-        ${{ inputs.BUILDOUT_COMMAND }} -c ${{ inputs.BUILDOUT_CONFIG_FILE }} buildout:eggs-directory=./eggs
+        ${{ inputs.BUILDOUT_COMMAND }} ${{ inputs.BUILDOUT_OPTIONS }} -c ${{ inputs.BUILDOUT_CONFIG_FILE }} buildout:eggs-directory=./eggs
     - name: Run tests
       shell: bash
       run: |
