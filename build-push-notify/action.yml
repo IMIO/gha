@@ -38,6 +38,9 @@ inputs:
   TARGET:
     description: 'Target stage to build'
     required: false
+  PRE_BUILD_COMMANDS:
+    description: 'Optional commands to run before the build'
+    required: false
 runs:
   using: 'composite'
   steps:
@@ -61,6 +64,11 @@ runs:
         registry: ${{ inputs.REGISTRY_URL }}
         username: ${{ inputs.REGISTRY_USERNAME }}
         password: ${{ inputs.REGISTRY_PASSWORD }}
+    - name: Run pre-build commands
+      if: ${{ inputs.PRE_BUILD_COMMANDS != '' }}
+      run: |
+        ${{ inputs.PRE_BUILD_COMMANDS }}
+      shell: bash
     - name: Build
       uses: docker/build-push-action@v6.2.0
       with:
