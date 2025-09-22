@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+### Added
+- build-push-notify
+  - Added optional PRE_BUILD_COMMANDS input to run commands before the build (supports multiline)
+
 ## [v5.0.1] - 2025-07-17
 ### Changed
 - plone-package-test-notify

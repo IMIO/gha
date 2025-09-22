@@ -61,6 +61,7 @@ build/push a docker image using docker/build-push-action and optionally notify v
 | DOCKERFILE             |    yes   | string | `"Dockerfile"`  | Name of the Dockerfile |
 | BUILD_ARGS             |    yes   | string | `""`            | Build arguments to pass to the Dockerfile |
 | TARGET                 |    no    | string |                 | Target stage to build |
+| PRE_BUILD_COMMANDS     |    no    | string |                 | Optional commands to run before the build (one per line) |
 
 #### Example of usage
 
