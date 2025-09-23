@@ -39,6 +39,9 @@ This repository hosts a set of github actions we use to deploy our apps.
     - [tag-notify](#tag-notify)
       - [Inputs](#inputs-9)
       - [Example of usage](#example-of-usage-10)
+    - [k8s-update-tag](#k8s-update-tag)
+      - [Inputs](#inputs-10)
+      - [Example of usage](#example-of-usage-11)
   - [Contribute](#contribute)
     - [Release](#release)
 
@@ -290,6 +293,36 @@ Add tags to a docker image and optionally notify via a mattermost webhook
 #### Example of usage
 
 [IMIO/buildout.ideabox](https://github.com/IMIO/buildout.ideabox/blob/9e8218d6f52a5060d14139864b6b0d993f633202/.github/workflows/prod.yml#L16)
+
+---
+### k8s-update-tag
+
+Update a component tag in Kubernetes values file and commit to repository. This action is useful for automated deployments where you want to update the image tag in your Kubernetes configuration files.
+
+#### Inputs
+
+| name                   | required | type   | default         | description |
+| ---------------------- | -------- | ------ | --------------- | ----------- |
+| TAG                    |    yes   | string |                 | Tag to set for the component (e.g., commit SHA) |
+| REPO_TOKEN_NAME        |    yes   | string |                 | Name of the repository access token |
+| REPO_ACCESS_TOKEN      |    yes   | string |                 | Repository access token for authentication |
+| REPO_URL               |    yes   | string |                 | Repository URL (without https://) |
+| TARGET_BRANCH          |    no    | string | `"main"`        | Target branch to update |
+| VALUES_FILE_PATH       |    yes   | string |                 | Path to the values file to update |
+
+#### Example of usage
+
+```yaml
+- name: Update Kubernetes tag
+  uses: IMIO/gha/k8s-update-tag@v5
+  with:
+    TAG: ${{ github.sha }}
+    REPO_TOKEN_NAME: DEPLOY_TOKEN
+    REPO_ACCESS_TOKEN: ${{ secrets.K8S_DEPLOY_TOKEN }}
+    REPO_URL: github.com/myorg/k8s-configs.git
+    TARGET_BRANCH: main
+    VALUES_FILE_PATH: staging/myapp/values-dev.yaml
+```
 
 ## Contribute
 
