@@ -27,11 +27,11 @@ runs:
       run: |
         sudo apt-get update && sudo apt-get install -y curl git
       shell: bash
-    - name: Install uv and set the python version
-      uses: astral-sh/setup-uv@v6
-      with:
-        python-version: 3.13
-        version: 0.8.20
+    - name: Install yq
+      run: |
+        wget https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_amd64 -O /usr/local/bin/yq &&\
+        chmod +x /usr/local/bin/yq
+      shell: bash
     - name: Configure Git and repository
       run: |
         git clone "https://${{ inputs.REPO_TOKEN_NAME }}:${{ inputs.REPO_ACCESS_TOKEN }}@${{ inputs.REPO_URL }}" repo
@@ -43,7 +43,7 @@ runs:
     - name: Update component tag
       run: |
         # Update the tag in the values file
-        uvx yq -i '.image.tag = "${{ inputs.TAG }}"' ${{ inputs.VALUES_FILE_PATH }}
+        yq -i '.image.tag = "${{ inputs.TAG }}"' ${{ inputs.VALUES_FILE_PATH }}
 
         # Add and commit changes
         git add "${{ inputs.VALUES_FILE_PATH }}"
