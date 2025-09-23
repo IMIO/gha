@@ -48,6 +48,6 @@ runs:
 
         # Add and commit changes
         git add "${{ inputs.VALUES_FILE_PATH }}"
-        git commit --allow-empty -m "CI Automated Deploy of ${{ inputs.VALUES_FILE_PATH }} in staging with tag ${{ inputs.TAG }}"
+        git commit --allow-empty -m "CI Automated Deploy of ${{ inputs.VALUES_FILE_PATH }} with tag ${{ inputs.TAG }}"
         git push origin HEAD:${{ inputs.TARGET_BRANCH }}
       shell: bash
