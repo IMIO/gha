@@ -29,12 +29,11 @@ runs:
       shell: bash
     - name: Configure Git and repository
       run: |
-        git remote set-url origin "https://${{ inputs.REPO_TOKEN_NAME }}:${{ inputs.REPO_ACCESS_TOKEN }}@${{ inputs.REPO_URL }}"
+        git clone "https://${{ inputs.REPO_TOKEN_NAME }}:${{ inputs.REPO_ACCESS_TOKEN }}@${{ inputs.REPO_URL }}" repo
+        cd repo
         git config --global user.email "github-ci@imio.be"
         git config --global user.name "GitHub Actions CI"
-        git fetch
-        git switch ${{ inputs.TARGET_BRANCH }}
-        git reset --hard origin/${{ inputs.TARGET_BRANCH }}
+        git checkout ${{ inputs.TARGET_BRANCH }}
       shell: bash
     - name: Update component tag
       run: |
