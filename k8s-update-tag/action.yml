@@ -42,6 +42,7 @@ runs:
       shell: bash
     - name: Update component tag
       run: |
+        cd repo
         # Update the tag in the values file
         yq -i '.image.tag = "${{ inputs.TAG }}"' ${{ inputs.VALUES_FILE_PATH }}
 
