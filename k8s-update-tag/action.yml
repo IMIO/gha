@@ -29,8 +29,8 @@ runs:
       shell: bash
     - name: Install yq
       run: |
-        wget https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_amd64 -O /usr/local/bin/yq &&\
-        chmod +x /usr/local/bin/yq
+        sudo wget https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_amd64 -O /usr/local/bin/yq &&\
+        sudo chmod +x /usr/local/bin/yq
       shell: bash
     - name: Configure Git and repository
       run: |
