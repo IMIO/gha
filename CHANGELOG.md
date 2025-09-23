@@ -1,9 +1,12 @@
 # Changelog
 
 ## [Unreleased]
-### Added
+### Changed
 - build-push-notify
-  - Added optional PRE_BUILD_COMMANDS input to run commands before the build (supports multiline)
+  - Added optional PRE_BUILD_COMMAND input to run commands before the build (supports multiline)
+### Added
+- k8s-update-tag
+  - New action to update component tags in Kubernetes values files and commit changes
 
 ## [v5.0.1] - 2025-07-17
 ### Changed

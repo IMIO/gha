@@ -1,0 +1,48 @@
+name: Update Kubernetes Component Tag
+description: Update a component tag in Kubernetes values file and commit to repository
+inputs:
+  TAG:
+    description: 'Tag to set for the component (e.g., commit SHA)'
+    required: true
+  REPO_TOKEN_NAME:
+    description: 'Name of the repository access token'
+    required: true
+  REPO_ACCESS_TOKEN:
+    description: 'Repository access token for authentication'
+    required: true
+  REPO_URL:
+    description: 'Repository URL (without https://)'
+    required: true
+  TARGET_BRANCH:
+    description: 'Target branch to update'
+    required: true
+    default: 'main'
+  VALUES_FILE_PATH:
+    description: 'Path to the values file to update'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Install dependencies
+      run: |
+        sudo apt-get update && sudo apt-get install -y curl git
+      shell: bash
+    - name: Configure Git and repository
+      run: |
+        git remote set-url origin "https://${{ inputs.REPO_TOKEN_NAME }}:${{ inputs.REPO_ACCESS_TOKEN }}@${{ inputs.REPO_URL }}"
+        git config --global user.email "github-ci@imio.be"
+        git config --global user.name "GitHub Actions CI"
+        git fetch
+        git switch ${{ inputs.TARGET_BRANCH }}
+        git reset --hard origin/${{ inputs.TARGET_BRANCH }}
+      shell: bash
+    - name: Update component tag
+      run: |
+        # Update the tag in the values file
+        yq -i '.image.tag = "${{ inputs.TAG }}"' ${{ inputs.VALUES_FILE_PATH }}
+
+        # Add and commit changes
+        git add "${{ inputs.VALUES_FILE_PATH }}"
+        git commit --allow-empty -m "CI Automated Deploy of ${{ inputs.VALUES_FILE_PATH }} in staging with tag ${{ inputs.TAG }}"
+        git push origin HEAD:${{ inputs.TARGET_BRANCH }}
+      shell: bash
