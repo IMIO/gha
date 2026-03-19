@@ -56,7 +56,7 @@ runs:
         if which fpm > /dev/null; then
           echo "fpm is already installed"
         else
-          sudo gem install fpm -v 1.15.1
+          sudo gem install fpm -v 1.16.0
         fi
       shell: bash
     - name: 'Install signing key'
