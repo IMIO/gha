@@ -65,11 +65,16 @@ runs:
         SIGNER_KEY_PASSPHRASE: ${{ inputs.SIGNER_KEY_PASSPHRASE }}
       shell: bash
       run: |
+        GNUPGHOME=$(mktemp -d)
+        chmod 700 "$GNUPGHOME"
+        echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
         KEY_FILE=$(mktemp)
-        chmod 600 "$KEY_FILE"
-        trap "rm -f '$KEY_FILE'" EXIT
+        DECODED_KEY=$(mktemp)
+        chmod 600 "$KEY_FILE" "$DECODED_KEY"
+        trap "rm -f '$KEY_FILE' '$DECODED_KEY'" EXIT
         echo "$SIGNER_KEY" > "$KEY_FILE"
-        base64 -d "$KEY_FILE" | gpg --passphrase "$SIGNER_KEY_PASSPHRASE" --pinentry-mode loopback --import
+        base64 -d "$KEY_FILE" > "$DECODED_KEY"
+        printf '%s\n' "$SIGNER_KEY_PASSPHRASE" | gpg --passphrase-fd 0 --pinentry-mode loopback --import "$DECODED_KEY"
     - name: 'Build package'
       env:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
@@ -97,14 +102,18 @@ runs:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
         PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
       run: |
-        mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
-        printf 'allow-preset-passphrase\nallow-loopback-pinentry\n' > ~/.gnupg/gpg-agent.conf
+        printf 'allow-preset-passphrase\nallow-loopback-pinentry\n' > "$GNUPGHOME/gpg-agent.conf"
         gpgconf --kill gpg-agent
         gpg-connect-agent reloadagent /bye
         KEY_GRIP=$(gpg --with-keygrip --list-secret-keys '${{ inputs.SIGNER_KEY_ID }}' | awk '/Keygrip/{print $3; exit}')
         echo '${{ inputs.SIGNER_KEY_PASSPHRASE }}' | "$(gpgconf --list-dirs libexecdir)/gpg-preset-passphrase" --preset "$KEY_GRIP"
         debsigs --sign=origin -k ${{ inputs.SIGNER_KEY_ID }} \
           ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb
+      shell: bash
+    - name: 'Cleanup GPG home'
+      if: always()
+      run: |
+        rm -rf "$GNUPGHOME"
       shell: bash
     - name: 'Upload package'
       env:
