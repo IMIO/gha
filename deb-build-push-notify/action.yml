@@ -124,6 +124,7 @@ runs:
         PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
       run: |
         NETRC_FILE="$(mktemp)"
+        trap 'rm -f "$NETRC_FILE"' EXIT
         chmod 0600 "$NETRC_FILE"
         REPO_HOST="$(echo "$REPOSITORY_URL" | sed 's|https\?://||' | cut -d/ -f1)"
         printf 'machine %s login %s password %s\n' \
@@ -133,7 +134,6 @@ runs:
           --fail -X POST -H Content-Type:multipart/form-data \
           --data-binary @"${PACKAGE_NAME}_${PACKAGE_VERSION}_amd64.deb" \
           "$REPOSITORY_URL"
-        rm -f "$NETRC_FILE"
       shell: bash
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
