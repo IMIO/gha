@@ -97,7 +97,6 @@ runs:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
         PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
       run: |
-<<<<<<< HEAD
         mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
         printf 'allow-preset-passphrase\nallow-loopback-pinentry\n' > ~/.gnupg/gpg-agent.conf
         gpgconf --kill gpg-agent
@@ -106,13 +105,6 @@ runs:
         echo '${{ inputs.SIGNER_KEY_PASSPHRASE }}' | "$(gpgconf --list-dirs libexecdir)/gpg-preset-passphrase" --preset "$KEY_GRIP"
         debsigs --sign=origin -k ${{ inputs.SIGNER_KEY_ID }} \
           ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb
-=======
-        dpkg-sig \
-          -g "--pinentry-mode loopback --no-tty --yes --batch --passphrase '$SIGNER_KEY_PASSPHRASE'" \
-          -s builder \
-          -k "$SIGNER_KEY_ID" \
-          "${PACKAGE_NAME}_${PACKAGE_VERSION}_amd64.deb"
->>>>>>> f05b644 (wip: harden security)
       shell: bash
     - name: 'Upload package'
       env:
@@ -122,11 +114,17 @@ runs:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
         PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
       run: |
+        NETRC_FILE="$(mktemp)"
+        chmod 0600 "$NETRC_FILE"
+        REPO_HOST="$(echo "$REPOSITORY_URL" | sed 's|https\?://||' | cut -d/ -f1)"
+        printf 'machine %s login %s password %s\n' \
+          "$REPO_HOST" "$REPOSITORY_LOGIN" "$REPOSITORY_PASSWORD" > "$NETRC_FILE"
         curl \
-          -vk --fail -X POST -H Content-Type:multipart/form-data \
-          -u "$REPOSITORY_LOGIN:$REPOSITORY_PASSWORD" \
+          --netrc-file "$NETRC_FILE" \
+          --fail -X POST -H Content-Type:multipart/form-data \
           --data-binary @"${PACKAGE_NAME}_${PACKAGE_VERSION}_amd64.deb" \
           "$REPOSITORY_URL"
+        rm -f "$NETRC_FILE"
       shell: bash
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
