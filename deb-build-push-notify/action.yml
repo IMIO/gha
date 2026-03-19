@@ -43,12 +43,12 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: 'Install ar, curl, debsigs, python3-pip and ruby-dev'
+    - name: 'Install ar, curl, debsigs, jq, python3-pip and ruby-dev'
       run: |
-        if which ar > /dev/null && which curl > /dev/null && which debsigs > /dev/null && which pip3 > /dev/null && which gem > /dev/null; then
+        if which ar > /dev/null && which curl > /dev/null && which debsigs > /dev/null && which jq > /dev/null && which pip3 > /dev/null && which gem > /dev/null; then
           echo "Packages are already installed"
         else
-          sudo apt-get update && sudo apt-get install -y binutils curl debsigs python3-pip ruby-dev
+          sudo apt-get update && sudo apt-get install -y binutils curl debsigs jq python3-pip ruby-dev
         fi
       shell: bash
     - name: 'Install fpm'
