@@ -61,7 +61,7 @@ runs:
         RUNDECK_JOB_PERMALINK: ${{ steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : there was an error in executation of Rundeck job [$RUNDECK_JOB_NAME]($RUNDECK_JOB_PERMALINK)by [GitHub workflow $GITHUB_WORKFLOW]($JOB_URL) on repository [$GITHUB_REPOSITORY]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)"
+        MESSAGE="Error : there was an error in execution of Rundeck job [$RUNDECK_JOB_NAME]($RUNDECK_JOB_PERMALINK) by [GitHub workflow $GITHUB_WORKFLOW]($JOB_URL) on repository [$GITHUB_REPOSITORY]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)"
         curl -i -X POST -H 'Content-Type: application/json' \
           -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
           "$WEBHOOK_URL"
