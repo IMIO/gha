@@ -20,16 +20,19 @@ runs:
         fi
       shell: bash
     - name: Check URL availibility
+      env:
+        URL: ${{ inputs.URL }}
+        TIMEOUT: ${{ inputs.TIMEOUT }}
       run: |
-        end=$((SECONDS+${{ inputs.TIMEOUT }}*60))
-        until curl -m 3 --output /dev/null --silent --fail '${{ inputs.URL }}';
+        end=$((SECONDS+TIMEOUT*60))
+        until curl -m 3 --output /dev/null --silent --fail "$URL";
           do
               if [ $SECONDS -gt $end ]; then
-                echo "Timeout reached: ${{ inputs.URL }} is not available"
+                echo "Timeout reached: $URL is not available"
                 exit 1
               fi
               sleep 5
-              echo "Waiting until ${{ inputs.URL }} is available"
+              echo "Waiting until $URL is available"
           done
-        echo "${{ inputs.URL }} is available"
+        echo "$URL is available"
       shell: bash

@@ -1,5 +1,9 @@
 # Changelog
 
+## [unreleased] - 2026-xx-xx
+### Changed
+- Hardened all actions following security recommendations (see PR #8).
+
 ## [v6.0.0] - 2026-03-19
 - deb-build-push-notify (**breaking change**)
   - Replaced dpkg-sig with debsigs for Ubuntu 24.04 compatibility

@@ -34,10 +34,10 @@ runs:
   steps:
     - name: Install packages
       run: |
-        if which curl > /dev/null && which git > /dev/null; then
+        if which curl > /dev/null && which git > /dev/null && which jq > /dev/null; then
           echo "Packages are already installed"
         else
-          sudo apt-get update && sudo apt-get install -y curl git
+          sudo apt-get update && sudo apt-get install -y curl git jq
         fi
       shell: bash
     - name: Checkout
@@ -53,11 +53,13 @@ runs:
         repositories: "helm-charts"
     - name: Get Helm chart version
       id: get-version
+      env:
+        CHARTS_DIR: ${{ inputs.CHARTS_DIR }}
       run: |
-        echo VERSION=$(cat ${{ inputs.CHARTS_DIR }}/Chart.yaml | grep -oPm 1 '(?<=version: ).*') >> $GITHUB_ENV
+        echo VERSION=$(cat "$CHARTS_DIR/Chart.yaml" | grep -oPm 1 '(?<=version: ).*') >> $GITHUB_ENV
       shell: bash
     - name: Publish Helm chart
-      uses: tylerauerbeck/helm-gh-pages@main
+      uses: tylerauerbeck/helm-gh-pages@3227331903e1755121f8da35f2f4819d731449a5  # main as of 2026-03-13
       with:
         token: ${{ steps.app-token.outputs.token }}
         charts_dir: ${{ inputs.CHARTS_DIR }}
@@ -71,15 +73,25 @@ runs:
         dependencies: ${{ inputs.HELM_DEPENDENCIES }}
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
+      env:
+        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        REPOSITORY: ${{ github.repository }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Success : ${{ github.repository }} has published a Helm release with version ${{ env.VERSION }}. [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        MESSAGE="Success : $REPOSITORY has published a Helm release with version $VERSION. [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' \
+          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
+          "$WEBHOOK_URL"
       shell: bash
     - name : Send failure notification on Mattermost
       if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
+      env:
+        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        REPOSITORY: ${{ github.repository }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : Helm release has failed. (Repository: ${{ github.repository }}) [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        MESSAGE="Error : Helm release has failed. (Repository: $REPOSITORY) [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' \
+          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
+          "$WEBHOOK_URL"
       shell: bash

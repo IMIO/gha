@@ -27,12 +27,12 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install curl
+    - name: Install curl and jq
       run: |
-        if which curl > /dev/null; then
-          echo "curl is already installed"
+        if which curl > /dev/null && which jq > /dev/null; then
+          echo "curl and jq are already installed"
         else
-          sudo apt-get update && sudo apt-get install -y curl
+          sudo apt-get update && sudo apt-get install -y curl jq
         fi
       shell: bash
     - name: Checkout
@@ -48,23 +48,36 @@ runs:
         username: ${{ inputs.REGISTRY_USERNAME }}
         password: ${{ inputs.REGISTRY_PASSWORD }}
     - name: Download image
-      run : docker pull ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.IMAGE_TAG }}
+      env:
+        REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
+        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+      run: docker pull "$REGISTRY_URL/$IMAGE_NAME:$IMAGE_TAG"
       shell: bash
     - name: Tag image
+      env:
+        REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
+        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+        NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
       run: |
         set +e
-        IFS=$'\n' read -r -d '' -a tags <<< "${{ inputs.NEW_IMAGE_TAGS }}"
+        IFS=$'\n' read -r -d '' -a tags <<< "$NEW_IMAGE_TAGS"
         for tag in "${tags[@]}"; do
           echo "Tagging image with tag $tag"
-          docker tag ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:${{ inputs.IMAGE_TAG }} ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:$tag
+          docker tag "$REGISTRY_URL/$IMAGE_NAME:$IMAGE_TAG" "$REGISTRY_URL/$IMAGE_NAME:$tag"
         done
       shell: bash
     - name: Push image
+      env:
+        REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
+        NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
       run: |
         set +e
-        IFS=$'\n' read -r -d '' -a tags <<< "${{ inputs.NEW_IMAGE_TAGS }}"
+        IFS=$'\n' read -r -d '' -a tags <<< "$NEW_IMAGE_TAGS"
         for tag in "${tags[@]}"; do
-          docker push ${{ inputs.REGISTRY_URL }}/${{ inputs.IMAGE_NAME }}:$tag;
+          docker push "$REGISTRY_URL/$IMAGE_NAME:$tag";
         done
       shell: bash
     - name : Send notification on Mattermost
@@ -73,10 +86,13 @@ runs:
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
         IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
         NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
+        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
         MESSAGE="docker image $IMAGE_NAME:$IMAGE_TAG has been tagged with $NEW_IMAGE_TAGS on registry. [Click here to see job on GitHub]($JOB_URL) "
-        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        curl -i -X POST -H 'Content-Type: application/json' \
+          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
+          "$WEBHOOK_URL"
       shell: bash
     - name : Send failure notification on Mattermost
       if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
@@ -84,8 +100,11 @@ runs:
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
         IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
         NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
+        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
         MESSAGE="Error : docker image  $IMAGE_NAME:$IMAGE_TAG has not been been tagged with $NEW_IMAGE_TAGS on registry. [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        curl -i -X POST -H 'Content-Type: application/json' \
+          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
+          "$WEBHOOK_URL"
       shell: bash
