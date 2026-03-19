@@ -53,6 +53,9 @@ runs:
         VALUES_FILE_PATH: ${{ inputs.VALUES_FILE_PATH }}
         TAG: ${{ inputs.TAG }}
         TARGET_BRANCH: ${{ inputs.TARGET_BRANCH }}
+        REPO_TOKEN_NAME: ${{ inputs.REPO_TOKEN_NAME }}
+        REPO_ACCESS_TOKEN: ${{ inputs.REPO_ACCESS_TOKEN }}
+        REPO_URL: ${{ inputs.REPO_URL }}
       run: |
         cd repo
         # Update the tag in the values file
@@ -61,5 +64,5 @@ runs:
         # Add and commit changes
         git add "$VALUES_FILE_PATH"
         git commit --allow-empty -m "CI Automated Deploy of $VALUES_FILE_PATH with tag $TAG"
-        git push origin "HEAD:${TARGET_BRANCH}"
+        git push "https://${REPO_TOKEN_NAME}:${REPO_ACCESS_TOKEN}@${REPO_URL}" "HEAD:${TARGET_BRANCH}"
       shell: bash
