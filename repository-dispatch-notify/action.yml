@@ -30,12 +30,17 @@ inputs:
 runs:
   using: 'composite'
   steps:
-  - name: Install curl
+  - name: Install curl and jq
     run: |
       if which curl > /dev/null ; then
         echo "curl is already installed"
       else
         sudo apt-get update && sudo apt-get install -y curl
+      fi
+      if which jq > /dev/null ; then
+        echo "jq is already installed"
+      else
+        sudo apt-get update && sudo apt-get install -y jq
       fi
     shell: bash
   - uses: actions/create-github-app-token@v1
@@ -53,6 +58,7 @@ runs:
       GIT_REFERENCE: ${{ inputs.GIT_REFERENCE }}
       INPUTS: ${{ inputs.INPUTS }}
     run: |
+      PAYLOAD=$(jq -n --arg ref "$GIT_REFERENCE" --argjson inputs "$INPUTS" '{"ref": $ref, "inputs": $inputs}')
       curl -L \
       --fail-with-body \
       -X POST \
@@ -60,7 +66,7 @@ runs:
       -H "Authorization: Bearer $APP_TOKEN" \
       -H "X-GitHub-Api-Version: 2022-11-28" \
       "https://api.github.com/repos/$REPOSITORY_OWNER/$REPOSITORY/actions/workflows/$WORKFLOW_FILENAME/dispatches" \
-      -d "{\"ref\": \"$GIT_REFERENCE\", \"inputs\": $INPUTS }"
+      -d "$PAYLOAD"
     shell: bash
   - name : Send notification on Mattermost
     if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
