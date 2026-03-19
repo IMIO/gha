@@ -105,10 +105,10 @@ runs:
         printf 'allow-preset-passphrase\nallow-loopback-pinentry\n' > "$GNUPGHOME/gpg-agent.conf"
         gpgconf --kill gpg-agent
         gpg-connect-agent reloadagent /bye
-        KEY_GRIP=$(gpg --with-keygrip --list-secret-keys '${{ inputs.SIGNER_KEY_ID }}' | awk '/Keygrip/{print $3; exit}')
-        echo '${{ inputs.SIGNER_KEY_PASSPHRASE }}' | "$(gpgconf --list-dirs libexecdir)/gpg-preset-passphrase" --preset "$KEY_GRIP"
-        debsigs --sign=origin -k ${{ inputs.SIGNER_KEY_ID }} \
-          ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb
+        KEY_GRIP=$(gpg --with-keygrip --list-secret-keys "$SIGNER_KEY_ID" | awk '/Keygrip/{print $3; exit}')
+        printf '%s\n' "$SIGNER_KEY_PASSPHRASE" | "$(gpgconf --list-dirs libexecdir)/gpg-preset-passphrase" --preset "$KEY_GRIP"
+        debsigs --sign=origin -k "$SIGNER_KEY_ID" \
+          "${PACKAGE_NAME}_${PACKAGE_VERSION}_amd64.deb"
       shell: bash
     - name: 'Cleanup GPG home'
       if: always()
