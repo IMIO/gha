@@ -43,12 +43,12 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: 'Install ar, curl, dpkg-sig, python3-pip and ruby-dev'
+    - name: 'Install ar, curl, debsigs, python3-pip and ruby-dev'
       run: |
-        if which ar > /dev/null && which curl > /dev/null && which dpkg-sig > /dev/null && which pip3 > /dev/null && which gem > /dev/null; then
+        if which ar > /dev/null && which curl > /dev/null && which debsigs > /dev/null && which pip3 > /dev/null && which gem > /dev/null; then
           echo "Packages are already installed"
         else
-          sudo apt-get update && sudo apt-get install -y binutils curl dpkg-sig python3-pip ruby-dev
+          sudo apt-get update && sudo apt-get install -y binutils curl debsigs python3-pip ruby-dev
         fi
       shell: bash
     - name: 'Install fpm'
@@ -82,11 +82,13 @@ runs:
       shell: bash
     - name: 'Sign package'
       run: |
-        dpkg-sig \
-        -g "--pinentry-mode loopback --no-tty --yes --batch --passphrase '${{ inputs.SIGNER_KEY_PASSPHRASE }}'" \
-        -s builder \
-        -k ${{ inputs.SIGNER_KEY_ID }} \
-        ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb
+        mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+        echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+        gpg-connect-agent reloadagent /bye
+        KEY_GRIP=$(gpg --with-keygrip --list-secret-keys '${{ inputs.SIGNER_KEY_ID }}' | awk '/Keygrip/{print $3; exit}')
+        echo '${{ inputs.SIGNER_KEY_PASSPHRASE }}' | "$(gpgconf --list-dirs libexecdir)/gpg-preset-passphrase" --preset "$KEY_GRIP"
+        debsigs --sign=origin -k ${{ inputs.SIGNER_KEY_ID }} \
+          ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb
       shell: bash
     - name: 'Upload package'
       run: |
