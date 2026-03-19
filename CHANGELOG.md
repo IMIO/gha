@@ -1,5 +1,9 @@
 # Changelog
 
+## [v6.0.0] - 2026-03-19
+- deb-build-push-notify (**breaking change**)
+  - Replaced dpkg-sig with debsigs for Ubuntu 24.04 compatibility
+
 ## [v5.1.0] - 2025-09-23
 ### Changed
 - build-push-notify
