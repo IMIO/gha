@@ -29,25 +29,40 @@ runs:
       shell: bash
     - name: Install yq
       run: |
-        sudo wget https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_amd64 -O /usr/local/bin/yq &&\
+        sudo wget https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_amd64 -O /usr/local/bin/yq
+        echo "1bb99e1019e23de33c7e6afc23e93dad72aad6cf2cb03c797f068ea79814ddb0  /usr/local/bin/yq" | sha256sum -c
         sudo chmod +x /usr/local/bin/yq
       shell: bash
     - name: Configure Git and repository
+      env:
+        REPO_TOKEN_NAME: ${{ inputs.REPO_TOKEN_NAME }}
+        REPO_ACCESS_TOKEN: ${{ inputs.REPO_ACCESS_TOKEN }}
+        REPO_URL: ${{ inputs.REPO_URL }}
+        TARGET_BRANCH: ${{ inputs.TARGET_BRANCH }}
       run: |
-        git clone "https://${{ inputs.REPO_TOKEN_NAME }}:${{ inputs.REPO_ACCESS_TOKEN }}@${{ inputs.REPO_URL }}" repo
+        git clone "https://${REPO_TOKEN_NAME}:${REPO_ACCESS_TOKEN}@${REPO_URL}" repo
         cd repo
+        # Remove credentials from remote URL to avoid leaking them via git remote -v
+        git remote set-url origin "https://${REPO_URL}"
         git config --global user.email "github-ci@imio.be"
         git config --global user.name "GitHub Actions CI"
-        git checkout ${{ inputs.TARGET_BRANCH }}
+        git checkout "${TARGET_BRANCH}"
       shell: bash
     - name: Update component tag
+      env:
+        VALUES_FILE_PATH: ${{ inputs.VALUES_FILE_PATH }}
+        TAG: ${{ inputs.TAG }}
+        TARGET_BRANCH: ${{ inputs.TARGET_BRANCH }}
+        REPO_TOKEN_NAME: ${{ inputs.REPO_TOKEN_NAME }}
+        REPO_ACCESS_TOKEN: ${{ inputs.REPO_ACCESS_TOKEN }}
+        REPO_URL: ${{ inputs.REPO_URL }}
       run: |
         cd repo
         # Update the tag in the values file
-        yq -i '.image.tag = "${{ inputs.TAG }}"' ${{ inputs.VALUES_FILE_PATH }}
+        env TAG="$TAG" yq -i '.image.tag = strenv(TAG)' "$VALUES_FILE_PATH"
 
         # Add and commit changes
-        git add "${{ inputs.VALUES_FILE_PATH }}"
-        git commit --allow-empty -m "CI Automated Deploy of ${{ inputs.VALUES_FILE_PATH }} with tag ${{ inputs.TAG }}"
-        git push origin HEAD:${{ inputs.TARGET_BRANCH }}
+        git add "$VALUES_FILE_PATH"
+        git commit --allow-empty -m "CI Automated Deploy of $VALUES_FILE_PATH with tag $TAG"
+        git push "https://${REPO_TOKEN_NAME}:${REPO_ACCESS_TOKEN}@${REPO_URL}" "HEAD:${TARGET_BRANCH}"
       shell: bash

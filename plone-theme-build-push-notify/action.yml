@@ -40,13 +40,21 @@ runs:
         pnpm install --no-frozen-lockfile
       shell: bash
     - name: Build themes
+      env:
+        THEME_PATH: ${{ inputs.THEME_PATH }}
       run: |
-        echo Building theme for ${{ inputs.THEME_PATH }}
-        pnpm --theme=${{ inputs.THEME_PATH }} build
+        echo "Building theme for $THEME_PATH"
+        pnpm "--theme=$THEME_PATH" build
       shell: bash
     - name: Upload theme
+      env:
+        PLONE_URL: ${{ inputs.PLONE_URL }}
+        PLONE_USERNAME: ${{ inputs.PLONE_USERNAME }}
+        PLONE_PASSWORD: ${{ inputs.PLONE_PASSWORD }}
+        THEME_PATH: ${{ inputs.THEME_PATH }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
-        python3 ${{ github.action_path }}/theme_uploader.py ${{ inputs.PLONE_URL }} ${{ inputs.PLONE_USERNAME }} ${{ inputs.PLONE_PASSWORD }} ${{ inputs.THEME_PATH }} theme.zip
+        python3 "$ACTION_PATH/theme_uploader.py" "$PLONE_URL" "$PLONE_USERNAME" "$PLONE_PASSWORD" "$THEME_PATH" theme.zip
       shell: bash
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}

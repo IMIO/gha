@@ -43,12 +43,12 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: 'Install ar, curl, debsigs, python3-pip and ruby-dev'
+    - name: 'Install ar, curl, debsigs, jq, python3-pip and ruby-dev'
       run: |
-        if which ar > /dev/null && which curl > /dev/null && which debsigs > /dev/null && which pip3 > /dev/null && which gem > /dev/null; then
+        if which ar > /dev/null && which curl > /dev/null && which debsigs > /dev/null && which jq > /dev/null && which pip3 > /dev/null && which gem > /dev/null; then
           echo "Packages are already installed"
         else
-          sudo apt-get update && sudo apt-get install -y binutils curl debsigs python3-pip ruby-dev
+          sudo apt-get update && sudo apt-get install -y binutils curl debsigs jq python3-pip ruby-dev
         fi
       shell: bash
     - name: 'Install fpm'
@@ -56,48 +56,84 @@ runs:
         if which fpm > /dev/null; then
           echo "fpm is already installed"
         else
-          sudo gem install fpm
+          sudo gem install fpm -v 1.16.0
         fi
       shell: bash
     - name: 'Install signing key'
+      env:
+        SIGNER_KEY: ${{ inputs.SIGNER_KEY }}
+        SIGNER_KEY_PASSPHRASE: ${{ inputs.SIGNER_KEY_PASSPHRASE }}
       shell: bash
       run: |
-        echo '${{ inputs.SIGNER_KEY }}' > /tmp/key.b64 \
-        && base64 -d /tmp/key.b64 > /tmp/key.gpg \
-        && gpg --passphrase '${{ inputs.SIGNER_KEY_PASSPHRASE }}' --pinentry-mode loopback --import /tmp/key.gpg
+        GNUPGHOME=$(mktemp -d)
+        chmod 700 "$GNUPGHOME"
+        echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+        KEY_FILE=$(mktemp)
+        DECODED_KEY=$(mktemp)
+        chmod 600 "$KEY_FILE" "$DECODED_KEY"
+        trap "rm -f '$KEY_FILE' '$DECODED_KEY'" EXIT
+        echo "$SIGNER_KEY" > "$KEY_FILE"
+        base64 -d "$KEY_FILE" > "$DECODED_KEY"
+        printf '%s\n' "$SIGNER_KEY_PASSPHRASE" | gpg --passphrase-fd 0 --pinentry-mode loopback --import "$DECODED_KEY"
     - name: 'Build package'
+      env:
+        PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
+        PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
+        PACKAGE_INSTALL_PATH: ${{ inputs.PACKAGE_INSTALL_PATH }}
+        PACKAGE_DEPENDENCY: ${{ inputs.PACKAGE_DEPENDENCY }}
       run: |
         fpm -a amd64 \
           --python-bin python3 \
           --python-pip pip3 \
           --python-package-name-prefix python3 \
-          -n ${{ inputs.PACKAGE_NAME }} \
+          -n "$PACKAGE_NAME" \
           -s python \
           -t deb \
-          -v ${{ inputs.PACKAGE_VERSION }} \
-          --python-install-lib ${{ inputs.PACKAGE_INSTALL_PATH }} \
-          -d ${{ inputs.PACKAGE_DEPENDENCY }} \
+          -v "$PACKAGE_VERSION" \
+          --python-install-lib "$PACKAGE_INSTALL_PATH" \
+          -d "$PACKAGE_DEPENDENCY" \
           --no-auto-depends \
           setup.py
       shell: bash
     - name: 'Sign package'
+      env:
+        SIGNER_KEY_PASSPHRASE: ${{ inputs.SIGNER_KEY_PASSPHRASE }}
+        SIGNER_KEY_ID: ${{ inputs.SIGNER_KEY_ID }}
+        PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
+        PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
       run: |
-        mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
-        printf 'allow-preset-passphrase\nallow-loopback-pinentry\n' > ~/.gnupg/gpg-agent.conf
+        printf 'allow-preset-passphrase\nallow-loopback-pinentry\n' > "$GNUPGHOME/gpg-agent.conf"
         gpgconf --kill gpg-agent
         gpg-connect-agent reloadagent /bye
-        KEY_GRIP=$(gpg --with-keygrip --list-secret-keys '${{ inputs.SIGNER_KEY_ID }}' | awk '/Keygrip/{print $3; exit}')
-        echo '${{ inputs.SIGNER_KEY_PASSPHRASE }}' | "$(gpgconf --list-dirs libexecdir)/gpg-preset-passphrase" --preset "$KEY_GRIP"
-        debsigs --sign=origin -k ${{ inputs.SIGNER_KEY_ID }} \
-          ${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb
+        KEY_GRIP=$(gpg --with-keygrip --list-secret-keys "$SIGNER_KEY_ID" | awk '/Keygrip/{print $3; exit}')
+        printf '%s\n' "$SIGNER_KEY_PASSPHRASE" | "$(gpgconf --list-dirs libexecdir)/gpg-preset-passphrase" --preset "$KEY_GRIP"
+        debsigs --sign=origin -k "$SIGNER_KEY_ID" \
+          "${PACKAGE_NAME}_${PACKAGE_VERSION}_amd64.deb"
+      shell: bash
+    - name: 'Cleanup GPG home'
+      if: always()
+      run: |
+        rm -rf "$GNUPGHOME"
       shell: bash
     - name: 'Upload package'
+      env:
+        REPOSITORY_LOGIN: ${{ inputs.REPOSITORY_LOGIN }}
+        REPOSITORY_PASSWORD: ${{ inputs.REPOSITORY_PASSWORD }}
+        REPOSITORY_URL: ${{ inputs.REPOSITORY_URL }}
+        PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
+        PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
       run: |
+        NETRC_FILE="$(mktemp)"
+        trap 'rm -f "$NETRC_FILE"' EXIT
+        chmod 0600 "$NETRC_FILE"
+        REPO_HOST="$(echo "$REPOSITORY_URL" | sed 's|https\?://||' | cut -d/ -f1)"
+        printf 'machine %s login %s password %s\n' \
+          "$REPO_HOST" "$REPOSITORY_LOGIN" "$REPOSITORY_PASSWORD" > "$NETRC_FILE"
         curl \
-          -vk --fail -X POST -H Content-Type:multipart/form-data \
-          -u ${{ inputs.REPOSITORY_LOGIN }}:${{ inputs.REPOSITORY_PASSWORD }} \
-          --data-binary @${{ inputs.PACKAGE_NAME }}_${{ inputs.PACKAGE_VERSION }}_amd64.deb \
-          ${{ inputs.REPOSITORY_URL }}
+          --netrc-file "$NETRC_FILE" \
+          --fail -X POST -H Content-Type:multipart/form-data \
+          --data-binary @"${PACKAGE_NAME}_${PACKAGE_VERSION}_amd64.deb" \
+          "$REPOSITORY_URL"
       shell: bash
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
@@ -105,10 +141,13 @@ runs:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
         PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
         GITHUB_BRANCH: ${{ github.ref_name }}
+        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
         MESSAGE="Build and push of $PACKAGE_NAME $PACKAGE_VERSION.deb OK (Branch : $GITHUB_BRANCH) . [Click here to see job on GitHub]($JOB_URL) "
-        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        curl -i -X POST -H 'Content-Type: application/json' \
+          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
+          "$WEBHOOK_URL"
       shell: bash
     - name : Send failure notification on Mattermost
       if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
@@ -116,8 +155,11 @@ runs:
         PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
         PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
         GITHUB_BRANCH: ${{ github.ref_name }}
+        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
         MESSAGE="Error : cannot build deb $PACKAGE_NAME $PACKAGE_VERSION.deb  (Branch : $GITHUB_BRANCH) . [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        curl -i -X POST -H 'Content-Type: application/json' \
+          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
+          "$WEBHOOK_URL"
       shell: bash

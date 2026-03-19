@@ -44,12 +44,12 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install curl
+    - name: Install curl and jq
       run: |
-        if which curl > /dev/null; then
-          echo "curl is already installed"
+        if which curl > /dev/null && which jq > /dev/null; then
+          echo "curl and jq are already installed"
         else
-          sudo apt-get update && sudo apt-get install -y curl
+          sudo apt-get update && sudo apt-get install -y curl jq
         fi
       shell: bash
     - name: Checkout
@@ -66,8 +66,10 @@ runs:
         password: ${{ inputs.REGISTRY_PASSWORD }}
     - name: Run pre-build commands
       if: ${{ inputs.PRE_BUILD_COMMANDS != '' }}
+      env:
+        PRE_BUILD_COMMANDS: ${{ inputs.PRE_BUILD_COMMANDS }}
       run: |
-        ${{ inputs.PRE_BUILD_COMMANDS }}
+        $PRE_BUILD_COMMANDS
       shell: bash
     - name: Build
       uses: docker/build-push-action@v6.2.0
@@ -86,18 +88,24 @@ runs:
       env:
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
         IMAGE_TAGS: ${{ inputs.IMAGE_TAGS }}
+        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
         MESSAGE="docker image $IMAGE_TAGS has been updated on registry. [Click here to see job on GitHub]($JOB_URL) "
-        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        curl -i -X POST -H 'Content-Type: application/json' \
+          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
+          "$WEBHOOK_URL"
       shell: bash
     - name : Send failure notification on Mattermost
       if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
       env:
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
         IMAGE_TAGS: ${{ inputs.IMAGE_TAGS }}
+        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
         MESSAGE="Error : docker image  $IMAGE_TAGS has not been updated on registry. [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        curl -i -X POST -H 'Content-Type: application/json' \
+          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
+          "$WEBHOOK_URL"
       shell: bash

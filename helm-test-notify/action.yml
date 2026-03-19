@@ -25,10 +25,10 @@ runs:
   steps:
     - name: Install packages
       run: |
-        if which curl > /dev/null && which git > /dev/null && which wget > /dev/null; then
+        if which curl > /dev/null && which git > /dev/null && which wget > /dev/null && which jq > /dev/null; then
           echo "Packages are already installed"
         else
-          sudo apt-get update && sudo apt-get install -y curl git wget
+          sudo apt-get update && sudo apt-get install -y curl git wget jq
         fi
       shell: bash
     - name: Checkout
@@ -46,26 +46,45 @@ runs:
     - name: Set up chart-testing
       uses: helm/chart-testing-action@v2.6.1
     - name: Run chart-testing (lint)
-      run: ct lint --chart-dirs . --charts . --target-branch ${{ github.event.repository.default_branch }}
+      env:
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      run: ct lint --chart-dirs . --charts . --target-branch "$DEFAULT_BRANCH"
       shell: bash
     - name: Create kind cluster
       uses: helm/kind-action@v1.10.0
     - name: Run chart-testing (install)
     #  run: ct install --chart-dirs . --charts . --target-branch ${{ github.event.repository.default_branch }}
     # can't use it until https://github.com/helm/chart-testing/issues/310 is resolved
-      run: helm install ${{ inputs.HELM_RELEASE }}  . -f values.yaml --namespace ${{ inputs.HELM_NAMESPACE }} --create-namespace
+      env:
+        HELM_RELEASE: ${{ inputs.HELM_RELEASE }}
+        HELM_NAMESPACE: ${{ inputs.HELM_NAMESPACE }}
+      run: helm install "$HELM_RELEASE"  . -f values.yaml --namespace "$HELM_NAMESPACE" --create-namespace
       shell: bash
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
+      env:
+        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        REPOSITORY: ${{ github.repository }}
+        REF_NAME: ${{ github.ref_name }}
+        SHA: ${{ github.sha }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Success : helm lint and tests. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        MESSAGE="Success : helm lint and tests. (Repository: $REPOSITORY, Branch: $REF_NAME, Commit: $SHA) [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' \
+          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
+          "$WEBHOOK_URL"
       shell: bash
     - name : Send failure notification on Mattermost
       if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
+      env:
+        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        REPOSITORY: ${{ github.repository }}
+        REF_NAME: ${{ github.ref_name }}
+        SHA: ${{ github.sha }}
       run: |
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : helm lint and tests have failed. (Repository: ${{ github.repository }}, Branch: ${{ github.ref_name }}, Commit: ${{ github.sha }}) [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' -d "{\"text\": \"$MESSAGE\"}" ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        MESSAGE="Error : helm lint and tests have failed. (Repository: $REPOSITORY, Branch: $REF_NAME, Commit: $SHA) [Click here to see job on GitHub]($JOB_URL)"
+        curl -i -X POST -H 'Content-Type: application/json' \
+          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
+          "$WEBHOOK_URL"
       shell: bash
