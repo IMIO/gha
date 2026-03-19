@@ -1,6 +1,6 @@
 # Changelog
 
-## [unreleased] - 2026-xx-xx
+## [v6.1.0] - 2026-03-19
 ### Changed
 - Hardened all actions following security recommendations (see PR #8).
 
