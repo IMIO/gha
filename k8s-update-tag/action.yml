@@ -56,7 +56,7 @@ runs:
       run: |
         cd repo
         # Update the tag in the values file
-        yq -i ".image.tag = \"$TAG\"" "$VALUES_FILE_PATH"
+        env TAG="$TAG" yq -i '.image.tag = strenv(TAG)' "$VALUES_FILE_PATH"
 
         # Add and commit changes
         git add "$VALUES_FILE_PATH"
