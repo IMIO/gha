@@ -83,7 +83,8 @@ runs:
     - name: 'Sign package'
       run: |
         mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
-        echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+        printf 'allow-preset-passphrase\nallow-loopback-pinentry\n' > ~/.gnupg/gpg-agent.conf
+        gpgconf --kill gpg-agent
         gpg-connect-agent reloadagent /bye
         KEY_GRIP=$(gpg --with-keygrip --list-secret-keys '${{ inputs.SIGNER_KEY_ID }}' | awk '/Keygrip/{print $3; exit}')
         echo '${{ inputs.SIGNER_KEY_PASSPHRASE }}' | "$(gpgconf --list-dirs libexecdir)/gpg-preset-passphrase" --preset "$KEY_GRIP"
