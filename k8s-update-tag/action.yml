@@ -44,6 +44,7 @@ runs:
         # Store credentials in .netrc to avoid leaking them in git URLs / process listing
         printf 'machine %s\nlogin %s\npassword %s\n' "${REPO_URL%%/*}" "$REPO_TOKEN_NAME" "$REPO_ACCESS_TOKEN" > ~/.netrc
         chmod 600 ~/.netrc
+        trap 'rm -f ~/.netrc' EXIT
         git clone "https://${REPO_URL}" repo
         cd repo
         git remote set-url origin "https://${REPO_URL}"
@@ -67,4 +68,8 @@ runs:
         git push origin "HEAD:${TARGET_BRANCH}"
         # Clear stored credentials
         rm -f ~/.netrc
+      shell: bash
+    - name: Clean up credentials
+      if: always()
+      run: rm -f ~/.netrc
       shell: bash

@@ -70,7 +70,7 @@ runs:
         PRE_BUILD_COMMANDS: ${{ inputs.PRE_BUILD_COMMANDS }}
       run: |
         while IFS= read -r cmd; do
-          [ -n "$cmd" ] && bash -c "$cmd"
+          [ -n "$cmd" ] && eval "$cmd"
         done <<< "$PRE_BUILD_COMMANDS"
       shell: bash
     - name: Build

@@ -88,7 +88,7 @@ runs:
         TEST_COMMAND: ${{ inputs.TEST_COMMAND }}
       shell: bash
       run: |
-        read -ra cmd <<< "$TEST_COMMAND"
+        eval "cmd=($TEST_COMMAND)"
         "${cmd[@]}"
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
