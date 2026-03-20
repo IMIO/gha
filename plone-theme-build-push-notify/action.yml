@@ -54,7 +54,7 @@ runs:
         THEME_PATH: ${{ inputs.THEME_PATH }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
-        python3 "$ACTION_PATH/theme_uploader.py" "$PLONE_URL" "$PLONE_USERNAME" "$PLONE_PASSWORD" "$THEME_PATH" theme.zip
+        python3 "$ACTION_PATH/theme_uploader.py" "$PLONE_URL" "$THEME_PATH" theme.zip
       shell: bash
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}

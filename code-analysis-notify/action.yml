@@ -32,7 +32,7 @@ runs:
         fi
       shell: bash
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
     - name: Run checks
       uses: IMIO/code-analysis-action@7969d657a907cb4d3b8e426481ba41a44cb57554  # main as of 2026-03-13
       with:
