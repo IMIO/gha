@@ -43,7 +43,7 @@ runs:
         sudo apt-get update && sudo apt-get install -y jq
       fi
     shell: bash
-  - uses: actions/create-github-app-token@v1
+  - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
     id: app-token
     with:
       app-id: ${{ inputs.APP_ID }}
@@ -70,13 +70,13 @@ runs:
     shell: bash
   - name : Send notification on Mattermost
     if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
-    uses: IMIO/gha/mattermost-notify@v4
+    uses: IMIO/gha/mattermost-notify@ec02349a0f486af868fc78489425e65e3b3e0c23 # v6.1.0
     with:
       MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       MESSAGE: "Repository dispatch event triggered on repository ${{ inputs.REPOSITORY }}"
   - name : Send failure notification on Mattermost
     if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
-    uses: IMIO/gha/mattermost-notify@v4
+    uses: IMIO/gha/mattermost-notify@ec02349a0f486af868fc78489425e65e3b3e0c23 # v6.1.0
     with:
       MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
       MESSAGE: "An error has been encountered while dispatching the event on repository ${{ inputs.REPOSITORY }}"

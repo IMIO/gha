@@ -10,15 +10,16 @@ Usage:
 
 from bs4 import BeautifulSoup
 
+import os
 import requests
 import requests.cookies
 import sys
 
 INSTANCE_URL = sys.argv[1]
-USERNAME = sys.argv[2]
-PASSWORD = sys.argv[3]
-THEME_PATH = sys.argv[4]
-THEME_FILENAME = sys.argv[5]
+USERNAME = os.environ["PLONE_USERNAME"]
+PASSWORD = os.environ["PLONE_PASSWORD"]
+THEME_PATH = sys.argv[2]
+THEME_FILENAME = sys.argv[3]
 
 
 def authenticate(
