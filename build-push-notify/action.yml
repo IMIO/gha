@@ -44,26 +44,26 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install curl and jq
+    - name: Install curl, jq and buildah
       run: |
-        if which curl > /dev/null && which jq > /dev/null; then
-          echo "curl and jq are already installed"
-        else
-          sudo apt-get update && sudo apt-get install -y curl jq
+        pkgs=""
+        which curl > /dev/null || pkgs="$pkgs curl"
+        which jq   > /dev/null || pkgs="$pkgs jq"
+        which buildah > /dev/null || pkgs="$pkgs buildah"
+        if [ -n "$pkgs" ]; then
+          sudo apt-get update && sudo apt-get install -y $pkgs
         fi
       shell: bash
     - name: Checkout
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
     - name: Login to registry
-      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-      with:
-        registry: ${{ inputs.REGISTRY_URL }}
-        username: ${{ inputs.REGISTRY_USERNAME }}
-        password: ${{ inputs.REGISTRY_PASSWORD }}
+      env:
+        REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
+        REGISTRY_USERNAME: ${{ inputs.REGISTRY_USERNAME }}
+        REGISTRY_PASSWORD: ${{ inputs.REGISTRY_PASSWORD }}
+      run: |
+        echo "$REGISTRY_PASSWORD" | buildah login -u "$REGISTRY_USERNAME" --password-stdin "$REGISTRY_URL"
+      shell: bash
     - name: Run pre-build commands
       if: ${{ inputs.PRE_BUILD_COMMANDS != '' }}
       env:
@@ -73,18 +73,55 @@ runs:
           [ -n "$cmd" ] && eval "$cmd"
         done <<< "$PRE_BUILD_COMMANDS"
       shell: bash
-    - name: Build
-      uses: docker/build-push-action@15560696de535e4014efeff63c48f16952e52dd1 # v6.2.0
-      with:
-        context: ${{ inputs.CONTEXT }}
-        file: ${{ inputs.DOCKERFILE }}
-        tags: |
-          ${{ inputs.IMAGE_TAGS }}
-        platforms: ${{ inputs.PLATFORMS }}
-        pull: true
-        push: true
-        build-args: ${{ inputs.BUILD_ARGS }}
-        target: ${{ inputs.TARGET }}
+    - name: Build and push
+      env:
+        IMAGE_TAGS: ${{ inputs.IMAGE_TAGS }}
+        PLATFORMS: ${{ inputs.PLATFORMS }}
+        CONTEXT: ${{ inputs.CONTEXT }}
+        DOCKERFILE: ${{ inputs.DOCKERFILE }}
+        BUILD_ARGS: ${{ inputs.BUILD_ARGS }}
+        TARGET: ${{ inputs.TARGET }}
+      run: |
+        # Assemble --build-arg flags
+        buildarg_args=()
+        while IFS= read -r arg; do
+          [ -n "$arg" ] && buildarg_args+=(--build-arg "$arg")
+        done <<< "$BUILD_ARGS"
+
+        # Assemble --target flag
+        target_args=()
+        [ -n "$TARGET" ] && target_args+=(--target "$TARGET")
+
+        if [[ "$PLATFORMS" == *","* ]]; then
+          # Multi-platform: build a manifest list, then push to each tag
+          buildah build \
+            --manifest local-manifest \
+            --platform "$PLATFORMS" \
+            -f "$DOCKERFILE" \
+            "${buildarg_args[@]}" \
+            "${target_args[@]}" \
+            "$CONTEXT"
+          while IFS= read -r tag; do
+            [ -n "$tag" ] && buildah manifest push --all local-manifest "docker://$tag"
+          done <<< "$IMAGE_TAGS"
+        else
+          # Single platform: build with explicit tags, then push each
+          tag_args=()
+          while IFS= read -r tag; do
+            [ -n "$tag" ] && tag_args+=(-t "$tag")
+          done <<< "$IMAGE_TAGS"
+          buildah build \
+            "${tag_args[@]}" \
+            --platform "$PLATFORMS" \
+            -f "$DOCKERFILE" \
+            "${buildarg_args[@]}" \
+            "${target_args[@]}" \
+            "$CONTEXT"
+          while IFS= read -r tag; do
+            [ -n "$tag" ] && buildah push "$tag"
+          done <<< "$IMAGE_TAGS"
+        fi
+      shell: bash
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       env:
