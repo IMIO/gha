@@ -44,12 +44,13 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install curl, jq and buildah
+    - name: Install curl, jq, buildah and qemu-user-static
       run: |
         pkgs=""
         which curl > /dev/null || pkgs="$pkgs curl"
         which jq   > /dev/null || pkgs="$pkgs jq"
         which buildah > /dev/null || pkgs="$pkgs buildah"
+        dpkg -s qemu-user-static > /dev/null 2>&1 || pkgs="$pkgs qemu-user-static"
         if [ -n "$pkgs" ]; then
           sudo apt-get update && sudo apt-get install -y $pkgs
         fi

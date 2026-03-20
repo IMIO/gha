@@ -5,7 +5,11 @@
 This script is used to upload a theme to a Plone instance.
 
 Usage:
-    python theme_uploader.py INSTANCE_URL USERNAME PASSWORD THEME_LOCATION
+    python theme_uploader.py INSTANCE_URL THEME_PATH THEME_FILENAME
+
+Environment variables:
+    PLONE_USERNAME  Plone instance username
+    PLONE_PASSWORD  Plone instance password
 """
 
 from bs4 import BeautifulSoup
@@ -70,7 +74,7 @@ def main():
     session = requests.Session()
     print("Authenticating to Plone instance...")
     response = authenticate(session, INSTANCE_URL, USERNAME, PASSWORD)
-    if "__ac=deleted" in response.headers["set-cookie"]:
+    if "__ac=deleted" in response.headers.get("set-cookie", ""):
         print("Authentication failed")
         sys.exit(1)
     print("Getting token...")
