@@ -62,6 +62,7 @@ runs:
         REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
         REGISTRY_USERNAME: ${{ inputs.REGISTRY_USERNAME }}
         REGISTRY_PASSWORD: ${{ inputs.REGISTRY_PASSWORD }}
+        BUILDAH_ISOLATION: chroot
       run: |
         echo "$REGISTRY_PASSWORD" | buildah login -u "$REGISTRY_USERNAME" --password-stdin "$REGISTRY_URL"
       shell: bash
