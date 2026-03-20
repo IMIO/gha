@@ -96,6 +96,7 @@ runs:
         if [[ "$PLATFORMS" == *","* ]]; then
           # Multi-platform: build a manifest list, then push to each tag
           buildah build \
+            --isolation=chroot \
             --manifest local-manifest \
             --platform "$PLATFORMS" \
             -f "$DOCKERFILE" \
@@ -112,6 +113,7 @@ runs:
             [ -n "$tag" ] && tag_args+=(-t "$tag")
           done <<< "$IMAGE_TAGS"
           buildah build \
+            --isolation=chroot \
             "${tag_args[@]}" \
             --platform "$PLATFORMS" \
             -f "$DOCKERFILE" \
