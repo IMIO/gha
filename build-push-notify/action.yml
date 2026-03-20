@@ -55,6 +55,11 @@ runs:
           sudo apt-get update && sudo apt-get install -y $pkgs
         fi
       shell: bash
+    - name: Configure buildah storage driver
+      run: |
+        mkdir -p ~/.config/containers
+        printf '[storage]\ndriver = "vfs"\n' > ~/.config/containers/storage.conf
+      shell: bash
     - name: Checkout
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
     - name: Login to registry
