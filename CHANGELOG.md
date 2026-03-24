@@ -1,5 +1,10 @@
 # Changelog
 
+## [v6.1.1] - 2026-03-24
+### Fixed
+- deb-build-push-notify
+  - Export GNUPGHOME so gpg imports the signing key into the correct tmpdir
+
 ## [v6.1.0] - 2026-03-19
 ### Changed
 - Hardened all actions following security recommendations (see PR #8).
