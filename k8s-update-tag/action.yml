@@ -29,9 +29,10 @@ runs:
       shell: bash
     - name: Install yq
       run: |
-        sudo wget https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_amd64 -O /usr/local/bin/yq
-        echo "1bb99e1019e23de33c7e6afc23e93dad72aad6cf2cb03c797f068ea79814ddb0  /usr/local/bin/yq" | sha256sum -c
-        sudo chmod +x /usr/local/bin/yq
+        wget https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_amd64 -O /tmp/yq
+        echo "1bb99e1019e23de33c7e6afc23e93dad72aad6cf2cb03c797f068ea79814ddb0  /tmp/yq" | sha256sum -c
+        sudo install -m 0755 /tmp/yq /usr/local/bin/yq
+        rm /tmp/yq
       shell: bash
     - name: Configure Git and repository
       env:
@@ -40,9 +41,12 @@ runs:
         REPO_URL: ${{ inputs.REPO_URL }}
         TARGET_BRANCH: ${{ inputs.TARGET_BRANCH }}
       run: |
-        git clone "https://${REPO_TOKEN_NAME}:${REPO_ACCESS_TOKEN}@${REPO_URL}" repo
+        # Store credentials in .netrc to avoid leaking them in git URLs / process listing
+        printf 'machine %s\nlogin %s\npassword %s\n' "${REPO_URL%%/*}" "$REPO_TOKEN_NAME" "$REPO_ACCESS_TOKEN" > ~/.netrc
+        chmod 600 ~/.netrc
+        trap 'rm -f ~/.netrc' EXIT
+        git clone "https://${REPO_URL}" repo
         cd repo
-        # Remove credentials from remote URL to avoid leaking them via git remote -v
         git remote set-url origin "https://${REPO_URL}"
         git config --global user.email "github-ci@imio.be"
         git config --global user.name "GitHub Actions CI"
@@ -53,9 +57,6 @@ runs:
         VALUES_FILE_PATH: ${{ inputs.VALUES_FILE_PATH }}
         TAG: ${{ inputs.TAG }}
         TARGET_BRANCH: ${{ inputs.TARGET_BRANCH }}
-        REPO_TOKEN_NAME: ${{ inputs.REPO_TOKEN_NAME }}
-        REPO_ACCESS_TOKEN: ${{ inputs.REPO_ACCESS_TOKEN }}
-        REPO_URL: ${{ inputs.REPO_URL }}
       run: |
         cd repo
         # Update the tag in the values file
@@ -64,5 +65,11 @@ runs:
         # Add and commit changes
         git add "$VALUES_FILE_PATH"
         git commit --allow-empty -m "CI Automated Deploy of $VALUES_FILE_PATH with tag $TAG"
-        git push "https://${REPO_TOKEN_NAME}:${REPO_ACCESS_TOKEN}@${REPO_URL}" "HEAD:${TARGET_BRANCH}"
+        git push origin "HEAD:${TARGET_BRANCH}"
+        # Clear stored credentials
+        rm -f ~/.netrc
+      shell: bash
+    - name: Clean up credentials
+      if: always()
+      run: rm -f ~/.netrc
       shell: bash
