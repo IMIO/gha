@@ -41,8 +41,6 @@ runs:
       run: |
         grep -q "runner:" /etc/subuid 2>/dev/null || echo "runner:100000:65536" | sudo tee -a /etc/subuid
         grep -q "runner:" /etc/subgid 2>/dev/null || echo "runner:100000:65536" | sudo tee -a /etc/subgid
-        sudo chmod u+s /usr/bin/newuidmap
-        sudo chmod u+s /usr/bin/newgidmap
       shell: bash
     - name: Checkout
       uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
