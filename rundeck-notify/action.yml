@@ -42,29 +42,15 @@ runs:
         echo "JOB_NAME=$(jq -r .job.name rundeck-response.json)" >> "$GITHUB_OUTPUT"
         echo "JOB_EXECUTION_PERMALINK=$(jq -r .permalink rundeck-response.json)" >> "$GITHUB_OUTPUT"
       shell: bash
-    - name : Send notification on Mattermost
-      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-        RUNDECK_JOB_NAME: ${{ steps.call-rundeck-job.outputs.JOB_NAME }}
-        RUNDECK_JOB_PERMALINK: ${{ steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK }}
-      run: |
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Rundeck job [$RUNDECK_JOB_NAME]($RUNDECK_JOB_PERMALINK) has been successfully executed by [GitHub workflow $GITHUB_WORKFLOW]($JOB_URL) on repository [$GITHUB_REPOSITORY]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)"
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
-    - name : Send failure notification on Mattermost
-      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-        RUNDECK_JOB_NAME: ${{ steps.call-rundeck-job.outputs.JOB_NAME }}
-        RUNDECK_JOB_PERMALINK: ${{ steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK }}
-      run: |
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : there was an error in execution of Rundeck job [$RUNDECK_JOB_NAME]($RUNDECK_JOB_PERMALINK) by [GitHub workflow $GITHUB_WORKFLOW]($JOB_URL) on repository [$GITHUB_REPOSITORY]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY)"
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
+    - name: Notify on Mattermost
+      if: always()
+      uses: imio/gha/mattermost-notify@v7
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        STATUS: ${{ steps.call-rundeck-job.outcome == 'success' && 'success' || 'failure' }}
+        TITLE: "Rundeck Job"
+        BODY: |
+          **Job:** [${{ steps.call-rundeck-job.outputs.JOB_NAME }}](${{ steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK }})
+          **Workflow:** ${{ github.workflow }}
+          **Repository:** ${{ github.repository }}
+          **Branch:** ${{ github.ref_name }}

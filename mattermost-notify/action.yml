@@ -1,29 +1,53 @@
 name: Notify on Mattermost
-description: Send a notification on a Mattermost webhook
+description: Send a rich color-coded notification to a Mattermost webhook
 inputs:
   MATTERMOST_WEBHOOK_URL:
-    description: 'Webhook URL to send notification on Mattermost'
+    description: 'Webhook URL to send notification on Mattermost. If empty, notification is skipped.'
+    required: false
+    default: ''
+  TITLE:
+    description: 'Short notification title (e.g. "Docker Build & Push")'
     required: true
-  MESSAGE:
-    description: 'Message to send on Mattermost'
+  BODY:
+    description: 'Notification body text (Markdown, newlines supported)'
+    required: false
+    default: ''
+  STATUS:
+    description: 'Job outcome: success or failure'
     required: true
 runs:
   using: 'composite'
   steps:
-    - name: Install curl and jq
-      run: |
-        if which curl > /dev/null && which jq > /dev/null; then
-          echo "curl and jq are already installed"
-        else
-          sudo apt-get update && sudo apt-get install -y curl jq
-        fi
-      shell: bash
-    - name : Send notification on Mattermost
+    - name: Send notification on Mattermost
       env:
         WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-        MESSAGE: ${{ inputs.MESSAGE }}
+        MM_TITLE: ${{ inputs.TITLE }}
+        MM_BODY: ${{ inputs.BODY }}
+        MM_STATUS: ${{ inputs.STATUS }}
       run: |
-        curl -i --fail-with-body -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE " '{"text": $text}')" \
-          "$WEBHOOK_URL"
+        if [ -z "$WEBHOOK_URL" ]; then
+          echo "Mattermost notification skipped: no webhook URL provided"
+          exit 0
+        fi
+        if ! command -v curl > /dev/null 2>&1; then
+          sudo apt-get update -q && sudo apt-get install -y -q curl
+        fi
+        if [ "$MM_STATUS" = "success" ]; then
+          MM_COLOR="#36a64f"; MM_EMOJI=":white_check_mark:"
+        else
+          MM_COLOR="#e01e5a"; MM_EMOJI=":x:"
+        fi
+        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        if [ -n "$MM_BODY" ]; then
+          FULL_BODY="$MM_BODY
+[View run on GitHub]($JOB_URL)"
+        else
+          FULL_BODY="[View run on GitHub]($JOB_URL)"
+        fi
+        MM_TITLE_ESC=$(printf '%s' "$MM_TITLE" | sed 's/\\/\\\\/g; s/"/\\"/g')
+        MM_BODY_ESC=$(printf '%s' "$FULL_BODY" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' '\r' | sed 's/\r/\\n/g')
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$WEBHOOK_URL" \
+          -H "Content-Type: application/json" \
+          -d "{\"username\":\"GitHub Actions\",\"icon_emoji\":\":github:\",\"attachments\":[{\"color\":\"$MM_COLOR\",\"pretext\":\"$MM_EMOJI **$MM_TITLE_ESC** — $GITHUB_REPOSITORY\",\"text\":\"$MM_BODY_ESC\"}]}")
+        echo "Mattermost notification: HTTP $HTTP_STATUS"
       shell: bash

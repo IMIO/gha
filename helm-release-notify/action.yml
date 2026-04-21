@@ -59,6 +59,7 @@ runs:
         echo VERSION=$(cat "$CHARTS_DIR/Chart.yaml" | grep -oPm 1 '(?<=version: ).*') >> $GITHUB_ENV
       shell: bash
     - name: Publish Helm chart
+      id: release
       uses: tylerauerbeck/helm-gh-pages@3227331903e1755121f8da35f2f4819d731449a5  # main as of 2026-03-13
       with:
         token: ${{ steps.app-token.outputs.token }}
@@ -71,27 +72,14 @@ runs:
         target_dir: ${{ inputs.TARGET_DIR }}
         helm_version: ${{ inputs.HELM_VERSION }}
         dependencies: ${{ inputs.HELM_DEPENDENCIES }}
-    - name : Send notification on Mattermost
-      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-        REPOSITORY: ${{ github.repository }}
-      run: |
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Success : $REPOSITORY has published a Helm release with version $VERSION. [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
-    - name : Send failure notification on Mattermost
-      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-        REPOSITORY: ${{ github.repository }}
-      run: |
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : Helm release has failed. (Repository: $REPOSITORY) [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
+    - name: Notify on Mattermost
+      if: always()
+      uses: imio/gha/mattermost-notify@v7
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        STATUS: ${{ steps.release.outcome == 'success' && 'success' || 'failure' }}
+        TITLE: "Helm Release"
+        BODY: |
+          **Repository:** ${{ github.repository }}
+          **Version:** ${{ env.VERSION }}
+          **Branch:** ${{ github.ref_name }}

@@ -47,6 +47,7 @@ runs:
         pnpm "--theme=$THEME_PATH" build
       shell: bash
     - name: Upload theme
+      id: upload
       env:
         PLONE_URL: ${{ inputs.PLONE_URL }}
         PLONE_USERNAME: ${{ inputs.PLONE_USERNAME }}
@@ -56,15 +57,13 @@ runs:
       run: |
         python3 "$ACTION_PATH/theme_uploader.py" "$PLONE_URL" "$PLONE_USERNAME" "$PLONE_PASSWORD" "$THEME_PATH" theme.zip
       shell: bash
-    - name : Send notification on Mattermost
-      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      uses: IMIO/gha/mattermost-notify@v3.7.2
+    - name: Notify on Mattermost
+      if: always()
+      uses: imio/gha/mattermost-notify@v7
       with:
         MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-        MESSAGE: "Theme has been successfully uploaded to Plone site ${{ inputs.PLONE_URL }}"
-    - name : Send failure notification on Mattermost
-      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      uses: IMIO/gha/mattermost-notify@v3.7.2
-      with:
-        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-        MESSAGE: "An error has been encountered while uploading theme to Plone site ${{ inputs.PLONE_URL }}"
+        STATUS: ${{ steps.upload.outcome == 'success' && 'success' || 'failure' }}
+        TITLE: "Plone Theme Upload"
+        BODY: |
+          **Site:** ${{ inputs.PLONE_URL }}
+          **Branch:** ${{ github.ref_name }}
