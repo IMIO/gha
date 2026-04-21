@@ -1,6 +1,6 @@
 # Changelog
 
-## [7.0.0] - 2026-04-21
+## [v7.0.0] - 2026-04-21
 ### Changed
 - mattermost-notify
   - Replaced `MESSAGE` input with `TITLE`, `BODY`, and `STATUS` inputs
