@@ -1,5 +1,10 @@
 # Changelog
 
+## [v7.0.1] - 2026-04-21
+### Changed
+- mattermost-notify
+  - Workflow actor (`github.actor`) is now displayed as **Author** at the top of every notification body
+
 ## [v7.0.0] - 2026-04-21
 ### Changed
 - mattermost-notify
