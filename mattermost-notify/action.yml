@@ -24,6 +24,7 @@ runs:
         MM_TITLE: ${{ inputs.TITLE }}
         MM_BODY: ${{ inputs.BODY }}
         MM_STATUS: ${{ inputs.STATUS }}
+        MM_ACTOR: ${{ github.actor }}
       run: |
         if [ -z "$WEBHOOK_URL" ]; then
           echo "Mattermost notification skipped: no webhook URL provided"
@@ -38,10 +39,11 @@ runs:
           MM_COLOR="#e01e5a"; MM_EMOJI=":x:"
         fi
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        ACTOR_LINE="**Author**: $MM_ACTOR"
         if [ -n "$MM_BODY" ]; then
-          FULL_BODY="$MM_BODY"$'\n'"[View run on GitHub]($JOB_URL)"
+          FULL_BODY="$ACTOR_LINE"$'\n'"$MM_BODY"$'\n'"[View run on GitHub]($JOB_URL)"
         else
-          FULL_BODY="[View run on GitHub]($JOB_URL)"
+          FULL_BODY="$ACTOR_LINE"$'\n'"[View run on GitHub]($JOB_URL)"
         fi
         MM_TITLE_ESC=$(printf '%s' "$MM_TITLE" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read())[1:-1])")
         MM_BODY_ESC=$(printf '%s' "$FULL_BODY" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read())[1:-1])")
