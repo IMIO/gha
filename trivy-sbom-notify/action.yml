@@ -1,0 +1,78 @@
+name: Trivy SBOM and notify
+description: Generate a CycloneDX (or SPDX) SBOM for a container image with Trivy, upload it as a workflow artifact, and notify on Mattermost
+inputs:
+  IMAGE_REF:
+    description: 'Full registry-qualified image reference to analyse (e.g. registry.example/org/app:sha)'
+    required: true
+  FORMAT:
+    description: 'SBOM format: cyclonedx or spdx-json'
+    required: false
+    default: 'cyclonedx'
+  OUTPUT:
+    description: 'Output file path for the generated SBOM'
+    required: false
+    default: 'sbom.cdx.json'
+  ARTIFACT_NAME:
+    description: 'Name of the workflow artifact that will contain the SBOM'
+    required: false
+    default: 'sbom-${{ github.sha }}'
+  RETENTION_DAYS:
+    description: 'Artifact retention in days'
+    required: false
+    default: '90'
+  TRIVY_USERNAME:
+    description: 'Username for a private image registry (optional)'
+    required: false
+    default: ''
+  TRIVY_PASSWORD:
+    description: 'Password for a private image registry (optional)'
+    required: false
+    default: ''
+  GITHUB_TOKEN:
+    description: 'GitHub token forwarded to Trivy as TRIVY_GITHUB_TOKEN to avoid API rate-limiting. Pass secrets.GITHUB_TOKEN from the calling workflow.'
+    required: false
+    default: ''
+  MATTERMOST_WEBHOOK_URL:
+    description: 'Webhook URL for Mattermost notification. If empty, notification is skipped.'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate SBOM with Trivy
+      id: sbom
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # v0.35.0
+      with:
+        scan-type: image
+        image-ref: ${{ inputs.IMAGE_REF }}
+        format: ${{ inputs.FORMAT }}
+        output: ${{ inputs.OUTPUT }}
+        exit-code: '0'
+        cache: 'true'
+      env:
+        TRIVY_GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+        TRIVY_USERNAME: ${{ inputs.TRIVY_USERNAME }}
+        TRIVY_PASSWORD: ${{ inputs.TRIVY_PASSWORD }}
+
+    - name: Upload SBOM artifact
+      if: always() && hashFiles(inputs.OUTPUT) != ''
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      with:
+        name: ${{ inputs.ARTIFACT_NAME }}
+        path: ${{ inputs.OUTPUT }}
+        retention-days: ${{ inputs.RETENTION_DAYS }}
+
+    - name: Notify on Mattermost
+      if: always()
+      uses: imio/gha/mattermost-notify@v7
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        STATUS: ${{ steps.sbom.outcome == 'success' && 'success' || 'failure' }}
+        TITLE: "Trivy SBOM"
+        BODY: |
+          **Repository:** [${{ github.repository }}](${{ github.server_url }}/${{ github.repository }})
+          **Branch:** ${{ github.ref_name }}
+          **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+          **Image:** ${{ inputs.IMAGE_REF }}
+          **Format:** ${{ inputs.FORMAT }}
+          **Artifact:** ${{ inputs.ARTIFACT_NAME }}

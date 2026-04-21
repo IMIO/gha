@@ -42,6 +42,12 @@ This repository hosts a set of github actions we use to deploy our apps.
     - [k8s-update-tag](#k8s-update-tag)
       - [Inputs](#inputs-10)
       - [Example of usage](#example-of-usage-11)
+    - [trivy-scan-notify](#trivy-scan-notify)
+      - [Inputs](#inputs-11)
+      - [Example of usage](#example-of-usage-12)
+    - [trivy-sbom-notify](#trivy-sbom-notify)
+      - [Inputs](#inputs-12)
+      - [Example of usage](#example-of-usage-13)
   - [Contribute](#contribute)
     - [Release](#release)
 
@@ -337,6 +343,118 @@ Update a component tag in Kubernetes values file and commit to repository. This 
     REPO_URL: github.com/myorg/k8s-configs.git
     TARGET_BRANCH: main
     VALUES_FILE_PATH: staging/myapp/values-dev.yaml
+```
+
+---
+### trivy-scan-notify
+
+Run a [Trivy](https://github.com/aquasecurity/trivy) scan (container image, filesystem or IaC config), upload the SARIF report to GitHub Code Scanning, archive it as a workflow artifact, and optionally notify via Mattermost with parsed severity counts.
+
+External actions are pinned by SHA as required by the iMio security référentiel (§5.5 CI/CD).
+
+> [!IMPORTANT]
+> The calling workflow must grant `permissions: security-events: write` for the SARIF upload to Code Scanning to succeed. On **private** repositories, GitHub Advanced Security must be enabled.
+
+#### Inputs
+
+| name                   | required | type    | default                   | description |
+| ---------------------- | -------- | ------- | ------------------------- | ----------- |
+| SCAN_TYPE              |   yes    | string  |                           | One of `image`, `fs`, `config` |
+| IMAGE_REF              |   cond.  | string  |                           | Image reference to scan (required when `SCAN_TYPE=image`) |
+| SCAN_REF               |   no     | string  | `"."`                     | Filesystem path (used when `SCAN_TYPE` is `fs` or `config`) |
+| SEVERITY               |   no     | string  | `"HIGH,CRITICAL"`         | Comma-separated severity levels to report |
+| SCANNERS               |   no     | string  | *(per-type default)*      | Trivy scanners. If empty: `image`→`vuln,secret,misconfig`, `fs`→`vuln,secret`, `config`→`secret,misconfig` |
+| EXIT_CODE              |   no     | string  | `"1"`                     | Exit code when findings match `SEVERITY` (set to `"0"` during bootstrap) |
+| IGNORE_UNFIXED         |   no     | string  | `"true"`                  | Ignore vulnerabilities without a known fix |
+| TRIVYIGNORES           |   no     | string  | `".trivyignore"`          | Path to a `.trivyignore` file |
+| UPLOAD_SARIF           |   no     | string  | `"true"`                  | Upload SARIF to GitHub Code Scanning |
+| SARIF_CATEGORY         |   no     | string  | `"trivy-<SCAN_TYPE>"`     | Code Scanning category for split results |
+| TRIVY_USERNAME         |   no     | string  |                           | Username for a private image registry |
+| TRIVY_PASSWORD         |   no     | string  |                           | Password for a private image registry |
+| GITHUB_TOKEN           |   no     | string  |                           | Pass `secrets.GITHUB_TOKEN` to avoid Trivy DB rate-limits |
+| MATTERMOST_WEBHOOK_URL |   no     | string  |                           | Webhook URL to send notifications on Mattermost |
+
+#### Example of usage
+
+```yaml
+name: Trivy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write  # required to upload SARIF
+
+jobs:
+  trivy-fs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: imio/gha/trivy-scan-notify@v7
+        with:
+          SCAN_TYPE: fs
+          SCAN_REF: .
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+
+  trivy-iac:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: imio/gha/trivy-scan-notify@v7
+        with:
+          SCAN_TYPE: config
+          SCAN_REF: .
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+
+  trivy-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - run: docker build -t ${{ github.repository }}:${{ github.sha }} .
+      - uses: imio/gha/trivy-scan-notify@v7
+        with:
+          SCAN_TYPE: image
+          IMAGE_REF: ${{ github.repository }}:${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+```
+
+---
+### trivy-sbom-notify
+
+Generate a CycloneDX (or SPDX) SBOM for a container image with Trivy, upload it as a workflow artifact, and optionally notify on Mattermost. This action does not block the pipeline.
+
+#### Inputs
+
+| name                   | required | type    | default                         | description |
+| ---------------------- | -------- | ------- | ------------------------------- | ----------- |
+| IMAGE_REF              |   yes    | string  |                                 | Full registry-qualified image reference |
+| FORMAT                 |   no     | string  | `"cyclonedx"`                   | `cyclonedx` or `spdx-json` |
+| OUTPUT                 |   no     | string  | `"sbom.cdx.json"`               | Output file path |
+| ARTIFACT_NAME          |   no     | string  | `"sbom-${{ github.sha }}"`      | Name of the workflow artifact |
+| RETENTION_DAYS         |   no     | string  | `"90"`                          | Artifact retention in days |
+| TRIVY_USERNAME         |   no     | string  |                                 | Username for a private image registry |
+| TRIVY_PASSWORD         |   no     | string  |                                 | Password for a private image registry |
+| GITHUB_TOKEN           |   no     | string  |                                 | Pass `secrets.GITHUB_TOKEN` to avoid rate-limits |
+| MATTERMOST_WEBHOOK_URL |   no     | string  |                                 | Webhook URL to send notifications on Mattermost |
+
+#### Example of usage
+
+```yaml
+jobs:
+  sbom:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: trivy-image
+    steps:
+      - uses: imio/gha/trivy-sbom-notify@v7
+        with:
+          IMAGE_REF: registry.example.org/${{ github.repository }}:${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
 ```
 
 ## Contribute

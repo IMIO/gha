@@ -1,5 +1,16 @@
 # Changelog
 
+## [v7.1.0] - 2026-04-21
+### Added
+- trivy-scan-notify
+  - New composite action wrapping `aquasecurity/trivy-action` for image, filesystem and IaC-config scans
+  - Uploads SARIF to GitHub Code Scanning and archives it as a 14-day workflow artifact
+  - Notifies on Mattermost with parsed CRITICAL/HIGH/MEDIUM finding counts
+  - External actions SHA-pinned per the iMio security référentiel (§5.5)
+- trivy-sbom-notify
+  - New composite action generating a CycloneDX (or SPDX) SBOM for a container image
+  - Uploads the SBOM as a workflow artifact (90-day retention by default) and notifies on Mattermost
+
 ## [v7.0.1] - 2026-04-21
 ### Changed
 - mattermost-notify

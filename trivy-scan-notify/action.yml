@@ -1,0 +1,200 @@
+name: Trivy scan and notify
+description: Run a Trivy scan (image, filesystem or IaC config), upload SARIF to Code Scanning, and notify on Mattermost with parsed severity counts
+inputs:
+  SCAN_TYPE:
+    description: 'Trivy scan type: image, fs or config'
+    required: true
+  IMAGE_REF:
+    description: 'Image reference to scan (required when SCAN_TYPE=image)'
+    required: false
+    default: ''
+  SCAN_REF:
+    description: 'Filesystem path to scan (used when SCAN_TYPE=fs or config)'
+    required: false
+    default: '.'
+  SEVERITY:
+    description: 'Comma-separated severity levels to report'
+    required: false
+    default: 'HIGH,CRITICAL'
+  SCANNERS:
+    description: 'Comma-separated list of Trivy scanners. If empty, a sensible default is picked per SCAN_TYPE (image=vuln,secret,misconfig ; fs=vuln,secret ; config=secret,misconfig)'
+    required: false
+    default: ''
+  EXIT_CODE:
+    description: 'Exit code to use when findings match SEVERITY (set to 0 during bootstrap to only report)'
+    required: false
+    default: '1'
+  IGNORE_UNFIXED:
+    description: 'Ignore vulnerabilities without a known fix'
+    required: false
+    default: 'true'
+  TRIVYIGNORES:
+    description: 'Path to a .trivyignore file (empty to disable)'
+    required: false
+    default: '.trivyignore'
+  UPLOAD_SARIF:
+    description: 'Upload the SARIF report to GitHub Code Scanning (requires security-events: write in the calling workflow, and GHAS on private repos)'
+    required: false
+    default: 'true'
+  SARIF_CATEGORY:
+    description: 'Category used when uploading SARIF (defaults to trivy-<SCAN_TYPE>)'
+    required: false
+    default: ''
+  TRIVY_USERNAME:
+    description: 'Username for a private image registry (optional)'
+    required: false
+    default: ''
+  TRIVY_PASSWORD:
+    description: 'Password for a private image registry (optional)'
+    required: false
+    default: ''
+  GITHUB_TOKEN:
+    description: 'GitHub token forwarded to Trivy as TRIVY_GITHUB_TOKEN to avoid API rate-limiting. Pass secrets.GITHUB_TOKEN from the calling workflow.'
+    required: false
+    default: ''
+  MATTERMOST_WEBHOOK_URL:
+    description: 'Webhook URL for Mattermost notification. If empty, notification is skipped.'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout
+      if: inputs.SCAN_TYPE != 'image'
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+    - name: Resolve default scanners
+      id: defaults
+      env:
+        SCAN_TYPE: ${{ inputs.SCAN_TYPE }}
+        SCANNERS_IN: ${{ inputs.SCANNERS }}
+        SARIF_CATEGORY_IN: ${{ inputs.SARIF_CATEGORY }}
+      shell: bash
+      run: |
+        if [ -n "$SCANNERS_IN" ]; then
+          SCANNERS_EFFECTIVE="$SCANNERS_IN"
+        else
+          case "$SCAN_TYPE" in
+            image)  SCANNERS_EFFECTIVE="vuln,secret,misconfig" ;;
+            fs)     SCANNERS_EFFECTIVE="vuln,secret" ;;
+            config) SCANNERS_EFFECTIVE="secret,misconfig" ;;
+            *)
+              echo "::error::Invalid SCAN_TYPE '$SCAN_TYPE' (must be image, fs or config)"
+              exit 2
+              ;;
+          esac
+        fi
+        if [ "$SCAN_TYPE" = "image" ] && [ -z "${{ inputs.IMAGE_REF }}" ]; then
+          echo "::error::IMAGE_REF is required when SCAN_TYPE=image"
+          exit 2
+        fi
+        if [ -n "$SARIF_CATEGORY_IN" ]; then
+          SARIF_CATEGORY_EFFECTIVE="$SARIF_CATEGORY_IN"
+        else
+          SARIF_CATEGORY_EFFECTIVE="trivy-$SCAN_TYPE"
+        fi
+        echo "scanners=$SCANNERS_EFFECTIVE" >> "$GITHUB_OUTPUT"
+        echo "sarif_category=$SARIF_CATEGORY_EFFECTIVE" >> "$GITHUB_OUTPUT"
+        echo "sarif_file=trivy-$SCAN_TYPE.sarif" >> "$GITHUB_OUTPUT"
+        echo "json_file=trivy-$SCAN_TYPE.json" >> "$GITHUB_OUTPUT"
+
+    - name: Trivy scan (SARIF)
+      id: scan
+      continue-on-error: true
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # v0.35.0
+      with:
+        scan-type: ${{ inputs.SCAN_TYPE }}
+        image-ref: ${{ inputs.SCAN_TYPE == 'image' && inputs.IMAGE_REF || '' }}
+        scan-ref: ${{ inputs.SCAN_TYPE == 'image' && '' || inputs.SCAN_REF }}
+        format: sarif
+        output: ${{ steps.defaults.outputs.sarif_file }}
+        severity: ${{ inputs.SEVERITY }}
+        scanners: ${{ steps.defaults.outputs.scanners }}
+        exit-code: ${{ inputs.EXIT_CODE }}
+        ignore-unfixed: ${{ inputs.IGNORE_UNFIXED }}
+        trivyignores: ${{ inputs.TRIVYIGNORES }}
+        cache: 'true'
+      env:
+        TRIVY_GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+        TRIVY_USERNAME: ${{ inputs.TRIVY_USERNAME }}
+        TRIVY_PASSWORD: ${{ inputs.TRIVY_PASSWORD }}
+
+    - name: Trivy scan (JSON, non-blocking, for counts)
+      if: always()
+      id: scan_json
+      continue-on-error: true
+      uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # v0.35.0
+      with:
+        scan-type: ${{ inputs.SCAN_TYPE }}
+        image-ref: ${{ inputs.SCAN_TYPE == 'image' && inputs.IMAGE_REF || '' }}
+        scan-ref: ${{ inputs.SCAN_TYPE == 'image' && '' || inputs.SCAN_REF }}
+        format: json
+        output: ${{ steps.defaults.outputs.json_file }}
+        severity: ${{ inputs.SEVERITY }}
+        scanners: ${{ steps.defaults.outputs.scanners }}
+        exit-code: '0'
+        ignore-unfixed: ${{ inputs.IGNORE_UNFIXED }}
+        trivyignores: ${{ inputs.TRIVYIGNORES }}
+        cache: 'true'
+      env:
+        TRIVY_GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+        TRIVY_USERNAME: ${{ inputs.TRIVY_USERNAME }}
+        TRIVY_PASSWORD: ${{ inputs.TRIVY_PASSWORD }}
+
+    - name: Extract severity counts
+      if: always()
+      id: counts
+      env:
+        JSON_FILE: ${{ steps.defaults.outputs.json_file }}
+      shell: bash
+      run: |
+        if ! command -v jq > /dev/null 2>&1; then
+          sudo apt-get update -q && sudo apt-get install -y -q jq
+        fi
+        CRITICAL=0; HIGH=0; MEDIUM=0
+        if [ -f "$JSON_FILE" ]; then
+          # Vulnerabilities + misconfigurations + secrets all carry a Severity field
+          CRITICAL=$(jq '[.. | objects | select(has("Severity")) | select(.Severity=="CRITICAL")] | length' "$JSON_FILE" 2>/dev/null || echo 0)
+          HIGH=$(jq '[.. | objects | select(has("Severity")) | select(.Severity=="HIGH")] | length' "$JSON_FILE" 2>/dev/null || echo 0)
+          MEDIUM=$(jq '[.. | objects | select(has("Severity")) | select(.Severity=="MEDIUM")] | length' "$JSON_FILE" 2>/dev/null || echo 0)
+        fi
+        echo "critical=$CRITICAL" >> "$GITHUB_OUTPUT"
+        echo "high=$HIGH" >> "$GITHUB_OUTPUT"
+        echo "medium=$MEDIUM" >> "$GITHUB_OUTPUT"
+        echo "Findings: CRITICAL=$CRITICAL HIGH=$HIGH MEDIUM=$MEDIUM"
+
+    - name: Upload SARIF to Code Scanning
+      if: always() && inputs.UPLOAD_SARIF == 'true' && hashFiles(steps.defaults.outputs.sarif_file) != ''
+      uses: github/codeql-action/upload-sarif@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a  # v3.35.2
+      with:
+        sarif_file: ${{ steps.defaults.outputs.sarif_file }}
+        category: ${{ steps.defaults.outputs.sarif_category }}
+
+    - name: Upload SARIF as workflow artifact
+      if: always() && hashFiles(steps.defaults.outputs.sarif_file) != ''
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      with:
+        name: trivy-${{ inputs.SCAN_TYPE }}-${{ github.sha }}
+        path: ${{ steps.defaults.outputs.sarif_file }}
+        retention-days: 14
+
+    - name: Notify on Mattermost
+      if: always()
+      uses: imio/gha/mattermost-notify@v7
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        STATUS: ${{ steps.scan.outcome == 'success' && 'success' || 'failure' }}
+        TITLE: "Trivy Scan (${{ inputs.SCAN_TYPE }})"
+        BODY: |
+          **Repository:** [${{ github.repository }}](${{ github.server_url }}/${{ github.repository }})
+          **Branch:** ${{ github.ref_name }}
+          **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+          **Target:** ${{ inputs.SCAN_TYPE == 'image' && inputs.IMAGE_REF || inputs.SCAN_REF }}
+          **Findings:** CRITICAL=${{ steps.counts.outputs.critical }} HIGH=${{ steps.counts.outputs.high }} MEDIUM=${{ steps.counts.outputs.medium }}
+
+    - name: Re-raise scan failure
+      if: steps.scan.outcome == 'failure' && inputs.EXIT_CODE != '0'
+      shell: bash
+      run: |
+        echo "::error::Trivy scan reported findings at or above the configured severity (see Code Scanning tab)."
+        exit 1
