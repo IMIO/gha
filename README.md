@@ -145,7 +145,7 @@ Release a helm chart and optionally notify via a mattermost webhook
 | CHARTS_DIR             |    yes   | string | "."             | Charts directory |
 | TARGET_DIR             |    yes   | string | "test"          | Target directory to release |
 | APP_ID                 |    yes   | string |                 | Github App ID |
-| SECRET_KEY             |    yes   | string |                 | Github App Secret key |
+| PRIVATE_KEY            |    yes   | string |                 | Github App private key |
 | MATTERMOST_WEBHOOK_URL |    no    | string |                 | Webhook URL to send notifications on Mattermost |
 
 #### Example of usage
@@ -174,18 +174,33 @@ Lint and test a helm chart and optionally notify via a mattermost webhook
 ---
 ### mattermost-notify
 
-Send a notification on a Mattermost webhook
+Send a rich color-coded notification to a Mattermost webhook.
+
+Notifications use Mattermost attachments with a green strip on success and red on failure, an emoji prefix, a structured bold-field body, and an auto-appended link to the GitHub Actions run. If `MATTERMOST_WEBHOOK_URL` is omitted the step is silently skipped.
 
 #### Inputs
 
-| name                   | required | type   | default         | description |
-| ---------------------- | -------- | ------ | --------------- | ----------- |
-| MESSAGE                |    yes   | string |                 | Message to send on Mattermost |
-| MATTERMOST_WEBHOOK_URL |    yes   | string |                 | Webhook URL to send notifications on Mattermost |
+| name                   | required | type   | default | description |
+| ---------------------- | -------- | ------ | ------- | ----------- |
+| MATTERMOST_WEBHOOK_URL |    no    | string | `""`    | Webhook URL. If empty, notification is skipped. |
+| TITLE                  |    yes   | string |         | Short notification title (e.g. `"Docker Build & Push"`) |
+| BODY                   |    no    | string | `""`    | Notification body (Markdown, newlines supported). A link to the GitHub Actions run is always appended automatically. |
+| STATUS                 |    yes   | string |         | Job outcome: `success` or `failure` |
 
 #### Example of usage
 
-[IMIO/imio_smartweb_themes](https://github.com/IMIO/imio_smartweb_themes/blob/12c86daff672c89fa90a21c6fe6f6b4214d94547/.github/workflows/build-upload.yml#L63)
+```yaml
+- name: Notify on Mattermost
+  if: always()
+  uses: imio/gha/mattermost-notify@v7
+  with:
+    MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+    STATUS: ${{ steps.build.outcome == 'success' && 'success' || 'failure' }}
+    TITLE: "My Job"
+    BODY: |
+      **Branch:** ${{ github.ref_name }}
+      **Commit:** ${{ github.sha }}
+```
 
 ---
 ### plone-package-test-notify
