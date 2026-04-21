@@ -1,7 +1,7 @@
 # Changelog
 
-## [v7.0.0] - 2026-04-21
-### Changed (breaking)
+## [7.0.0] - 2026-04-21
+### Changed
 - mattermost-notify
   - Replaced `MESSAGE` input with `TITLE`, `BODY`, and `STATUS` inputs
   - Notifications now use Mattermost attachments with color-coded strips (green for success, red for failure), emoji, and a structured bold-field body
