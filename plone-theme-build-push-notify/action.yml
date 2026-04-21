@@ -59,7 +59,7 @@ runs:
       shell: bash
     - name: Notify on Mattermost
       if: always()
-      uses: imio/gha/mattermost-notify@rework/mattermost-notifications
+      uses: imio/gha/mattermost-notify@v7
       with:
         MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
         STATUS: ${{ steps.upload.outcome == 'success' && 'success' || 'failure' }}
