@@ -72,6 +72,7 @@ runs:
         $PRE_BUILD_COMMANDS
       shell: bash
     - name: Build
+      id: build
       uses: docker/build-push-action@v6.2.0
       with:
         context: ${{ inputs.CONTEXT }}
@@ -83,29 +84,14 @@ runs:
         push: true
         build-args: ${{ inputs.BUILD_ARGS }}
         target: ${{ inputs.TARGET }}
-    - name : Send notification on Mattermost
-      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
-        IMAGE_TAGS: ${{ inputs.IMAGE_TAGS }}
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-      run: |
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="docker image $IMAGE_TAGS has been updated on registry. [Click here to see job on GitHub]($JOB_URL) "
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
-    - name : Send failure notification on Mattermost
-      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
-        IMAGE_TAGS: ${{ inputs.IMAGE_TAGS }}
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-      run: |
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : docker image  $IMAGE_TAGS has not been updated on registry. [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
+    - name: Notify on Mattermost
+      if: always()
+      uses: imio/gha/mattermost-notify@v7
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        STATUS: ${{ steps.build.outcome == 'success' && 'success' || 'failure' }}
+        TITLE: "Docker Build & Push"
+        BODY: |
+          **Image:** ${{ inputs.IMAGE_TAGS }}
+          **Branch:** ${{ github.ref_name }}
+          **Commit:** ${{ github.sha }}

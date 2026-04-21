@@ -1,5 +1,16 @@
 # Changelog
 
+## [v7.0.0] - 2026-04-21
+### Changed
+- mattermost-notify
+  - Replaced `MESSAGE` input with `TITLE`, `BODY`, and `STATUS` inputs
+  - Notifications now use Mattermost attachments with color-coded strips (green for success, red for failure), emoji, and a structured bold-field body
+  - `MATTERMOST_WEBHOOK_URL` is now optional (default empty); if not provided the step is silently skipped
+  - GitHub Actions run link is automatically appended to every notification
+- All notify actions
+  - Consolidated duplicate success/failure notification steps into a single `if: always()` call to `mattermost-notify`
+  - Branch name (`github.ref_name`) is now included in every notification body
+
 ## [v6.1.1] - 2026-03-24
 ### Fixed
 - deb-build-push-notify

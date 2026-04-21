@@ -116,6 +116,7 @@ runs:
         rm -rf "$GNUPGHOME"
       shell: bash
     - name: 'Upload package'
+      id: upload
       env:
         REPOSITORY_LOGIN: ${{ inputs.REPOSITORY_LOGIN }}
         REPOSITORY_PASSWORD: ${{ inputs.REPOSITORY_PASSWORD }}
@@ -135,31 +136,13 @@ runs:
           --data-binary @"${PACKAGE_NAME}_${PACKAGE_VERSION}_amd64.deb" \
           "$REPOSITORY_URL"
       shell: bash
-    - name : Send notification on Mattermost
-      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
-        PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
-        GITHUB_BRANCH: ${{ github.ref_name }}
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-      run: |
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Build and push of $PACKAGE_NAME $PACKAGE_VERSION.deb OK (Branch : $GITHUB_BRANCH) . [Click here to see job on GitHub]($JOB_URL) "
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
-    - name : Send failure notification on Mattermost
-      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        PACKAGE_NAME: ${{ inputs.PACKAGE_NAME }}
-        PACKAGE_VERSION: ${{ inputs.PACKAGE_VERSION }}
-        GITHUB_BRANCH: ${{ github.ref_name }}
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-      run: |
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : cannot build deb $PACKAGE_NAME $PACKAGE_VERSION.deb  (Branch : $GITHUB_BRANCH) . [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
+    - name: Notify on Mattermost
+      if: always()
+      uses: imio/gha/mattermost-notify@v7
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        STATUS: ${{ steps.upload.outcome == 'success' && 'success' || 'failure' }}
+        TITLE: "Debian Package Build & Push"
+        BODY: |
+          **Package:** ${{ inputs.PACKAGE_NAME }} ${{ inputs.PACKAGE_VERSION }}.deb
+          **Branch:** ${{ github.ref_name }}

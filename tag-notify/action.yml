@@ -69,6 +69,7 @@ runs:
         done
       shell: bash
     - name: Push image
+      id: push
       env:
         REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
         IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
@@ -80,31 +81,14 @@ runs:
           docker push "$REGISTRY_URL/$IMAGE_NAME:$tag";
         done
       shell: bash
-    - name : Send notification on Mattermost
-      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
-        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
-        NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-      run: |
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="docker image $IMAGE_NAME:$IMAGE_TAG has been tagged with $NEW_IMAGE_TAGS on registry. [Click here to see job on GitHub]($JOB_URL) "
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
-    - name : Send failure notification on Mattermost
-      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
-        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
-        NEW_IMAGE_TAGS: ${{ inputs.NEW_IMAGE_TAGS }}
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-      run: |
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : docker image  $IMAGE_NAME:$IMAGE_TAG has not been been tagged with $NEW_IMAGE_TAGS on registry. [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
+    - name: Notify on Mattermost
+      if: always()
+      uses: imio/gha/mattermost-notify@v7
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        STATUS: ${{ steps.push.outcome == 'success' && 'success' || 'failure' }}
+        TITLE: "Docker Image Tag"
+        BODY: |
+          **Image:** ${{ inputs.IMAGE_NAME }}:${{ inputs.IMAGE_TAG }}
+          **New tags:** ${{ inputs.NEW_IMAGE_TAGS }}
+          **Branch:** ${{ github.ref_name }}

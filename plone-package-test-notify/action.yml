@@ -82,44 +82,22 @@ runs:
       run: |
         $BUILDOUT_COMMAND $BUILDOUT_OPTIONS -c "$BUILDOUT_CONFIG_FILE" buildout:eggs-directory=./eggs
     - name: Run tests
+      id: test
       env:
         TEST_COMMAND: ${{ inputs.TEST_COMMAND }}
       shell: bash
       run: |
         eval "$TEST_COMMAND"
-    - name : Send notification on Mattermost
-      if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        TEST_COMMAND: ${{ inputs.TEST_COMMAND }}
-        PYTHON_VERSION: ${{ inputs.PYTHON_VERSION }}
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-        REPOSITORY: ${{ github.repository }}
-        SERVER_URL: ${{ github.server_url }}
-        REF_NAME: ${{ github.ref_name }}
-        SHA: ${{ github.sha }}
-      run: |
-        ESCAPED_COMMAND=$(echo "$TEST_COMMAND" | sed 's/\\/\\\\/g')
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Test has run successfully. ([Repository: $REPOSITORY]($SERVER_URL/$REPOSITORY), Branch: $REF_NAME, [View commit on GitHub]($SERVER_URL/$REPOSITORY/commit/$SHA), Test command: $ESCAPED_COMMAND, Python version: $PYTHON_VERSION) [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
-    - name : Send failure notification on Mattermost
-      if: ${{ failure() && inputs.MATTERMOST_WEBHOOK_URL != '' }}
-      env:
-        TEST_COMMAND: ${{ inputs.TEST_COMMAND }}
-        PYTHON_VERSION: ${{ inputs.PYTHON_VERSION }}
-        WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-        REPOSITORY: ${{ github.repository }}
-        SERVER_URL: ${{ github.server_url }}
-        REF_NAME: ${{ github.ref_name }}
-        SHA: ${{ github.sha }}
-      run: |
-        ESCAPED_COMMAND=$(echo "$TEST_COMMAND" | sed 's/\\/\\\\/g')
-        JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-        MESSAGE="Error : Test has failed. ([Repository: $REPOSITORY]($SERVER_URL/$REPOSITORY), Branch: $REF_NAME, [View commit on GitHub]($SERVER_URL/$REPOSITORY/commit/$SHA), Test command: $ESCAPED_COMMAND, Python version: $PYTHON_VERSION) [Click here to see job on GitHub]($JOB_URL)"
-        curl -i -X POST -H 'Content-Type: application/json' \
-          -d "$(jq -n --arg text "$MESSAGE" '{"text": $text}')" \
-          "$WEBHOOK_URL"
-      shell: bash
+    - name: Notify on Mattermost
+      if: always()
+      uses: imio/gha/mattermost-notify@v7
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        STATUS: ${{ steps.test.outcome == 'success' && 'success' || 'failure' }}
+        TITLE: "Plone Package Test"
+        BODY: |
+          **Repository:** [${{ github.repository }}](${{ github.server_url }}/${{ github.repository }})
+          **Branch:** ${{ github.ref_name }}
+          **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+          **Test command:** ${{ inputs.TEST_COMMAND }}
+          **Python version:** ${{ inputs.PYTHON_VERSION }}
