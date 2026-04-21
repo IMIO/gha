@@ -43,8 +43,8 @@ runs:
         else
           FULL_BODY="[View run on GitHub]($JOB_URL)"
         fi
-        MM_TITLE_ESC=$(printf '%s' "$MM_TITLE" | sed 's/\\/\\\\/g; s/"/\\"/g')
-        MM_BODY_ESC=$(printf '%s' "$FULL_BODY" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' '\r' | sed 's/\r/\\n/g')
+        MM_TITLE_ESC=$(printf '%s' "$MM_TITLE" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read())[1:-1])")
+        MM_BODY_ESC=$(printf '%s' "$FULL_BODY" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read())[1:-1])")
         HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$WEBHOOK_URL" \
           -H "Content-Type: application/json" \
           -d "{\"username\":\"GitHub Actions\",\"icon_emoji\":\":github:\",\"attachments\":[{\"color\":\"$MM_COLOR\",\"pretext\":\"$MM_EMOJI **$MM_TITLE_ESC** — $GITHUB_REPOSITORY\",\"text\":\"$MM_BODY_ESC\"}]}")
