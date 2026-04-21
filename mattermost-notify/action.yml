@@ -48,5 +48,10 @@ runs:
         HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$WEBHOOK_URL" \
           -H "Content-Type: application/json" \
           -d "{\"username\":\"GitHub Actions\",\"icon_emoji\":\":github:\",\"attachments\":[{\"color\":\"$MM_COLOR\",\"pretext\":\"$MM_EMOJI **$MM_TITLE_ESC** — $GITHUB_REPOSITORY\",\"text\":\"$MM_BODY_ESC\"}]}")
+        CURL_EXIT=$?
+        if [ $CURL_EXIT -ne 0 ] || [ "${HTTP_STATUS:-0}" -lt 200 ] || [ "${HTTP_STATUS:-0}" -gt 299 ]; then
+          echo "Mattermost notification failed: HTTP $HTTP_STATUS (curl exit $CURL_EXIT) for $WEBHOOK_URL"
+          exit 1
+        fi
         echo "Mattermost notification: HTTP $HTTP_STATUS"
       shell: bash

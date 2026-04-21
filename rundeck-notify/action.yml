@@ -50,7 +50,7 @@ runs:
         STATUS: ${{ steps.call-rundeck-job.outcome == 'success' && 'success' || 'failure' }}
         TITLE: "Rundeck Job"
         BODY: |
-          **Job:** [${{ steps.call-rundeck-job.outputs.JOB_NAME }}](${{ steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK }})
+          **Job:** ${{ steps.call-rundeck-job.outputs.JOB_NAME != '' && steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK != '' && format('[{0}]({1})', steps.call-rundeck-job.outputs.JOB_NAME, steps.call-rundeck-job.outputs.JOB_EXECUTION_PERMALINK) || steps.call-rundeck-job.outputs.JOB_NAME != '' && steps.call-rundeck-job.outputs.JOB_NAME || 'unavailable' }}
           **Workflow:** ${{ github.workflow }}
           **Repository:** ${{ github.repository }}
           **Branch:** ${{ github.ref_name }}
