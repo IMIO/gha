@@ -39,8 +39,7 @@ runs:
         fi
         JOB_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
         if [ -n "$MM_BODY" ]; then
-          FULL_BODY="$MM_BODY
-[View run on GitHub]($JOB_URL)"
+          FULL_BODY="$MM_BODY"$'\n'"[View run on GitHub]($JOB_URL)"
         else
           FULL_BODY="[View run on GitHub]($JOB_URL)"
         fi
