@@ -15,7 +15,7 @@ inputs:
   ARTIFACT_NAME:
     description: 'Name of the workflow artifact that will contain the SBOM'
     required: false
-    default: 'sbom-${{ github.sha }}'
+    default: ''
   RETENTION_DAYS:
     description: 'Artifact retention in days'
     required: false
@@ -54,11 +54,21 @@ runs:
         TRIVY_USERNAME: ${{ inputs.TRIVY_USERNAME }}
         TRIVY_PASSWORD: ${{ inputs.TRIVY_PASSWORD }}
 
+    - name: Resolve artifact name
+      id: artifact
+      shell: bash
+      run: |
+        name="${{ inputs.ARTIFACT_NAME }}"
+        if [ -z "$name" ]; then
+          name="sbom-${GITHUB_SHA}"
+        fi
+        echo "name=$name" >> "$GITHUB_OUTPUT"
+
     - name: Upload SBOM artifact
       if: always() && hashFiles(inputs.OUTPUT) != ''
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
       with:
-        name: ${{ inputs.ARTIFACT_NAME }}
+        name: ${{ steps.artifact.outputs.name }}
         path: ${{ inputs.OUTPUT }}
         retention-days: ${{ inputs.RETENTION_DAYS }}
 
@@ -75,4 +85,4 @@ runs:
           **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
           **Image:** ${{ inputs.IMAGE_REF }}
           **Format:** ${{ inputs.FORMAT }}
-          **Artifact:** ${{ inputs.ARTIFACT_NAME }}
+          **Artifact:** ${{ steps.artifact.outputs.name }}
