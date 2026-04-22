@@ -55,6 +55,7 @@ runs:
         TRIVY_PASSWORD: ${{ inputs.TRIVY_PASSWORD }}
 
     - name: Resolve artifact name
+      if: always()
       id: artifact
       shell: bash
       run: |
