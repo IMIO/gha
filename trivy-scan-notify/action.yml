@@ -130,7 +130,7 @@ runs:
         scan-ref: ${{ inputs.SCAN_TYPE == 'image' && '' || inputs.SCAN_REF }}
         format: json
         output: ${{ steps.defaults.outputs.json_file }}
-        severity: ${{ inputs.SEVERITY }}
+        severity: 'LOW,MEDIUM,HIGH,CRITICAL'
         scanners: ${{ steps.defaults.outputs.scanners }}
         exit-code: '0'
         ignore-unfixed: ${{ inputs.IGNORE_UNFIXED }}
