@@ -23,7 +23,7 @@ inputs:
     description: 'Anthropic API key. Pass secrets.ANTHROPIC_API_KEY from the calling workflow.'
     required: true
   GITHUB_TOKEN:
-    description: 'GitHub token with repository-advisories: write. Pass secrets.GITHUB_TOKEN from the calling workflow.'
+    description: 'Installation token from a GitHub App with Repository security advisories: write. Do NOT pass secrets.GITHUB_TOKEN — that token cannot be granted advisory scope. Use actions/create-github-app-token@v2 upstream (see README two-job example).'
     required: true
   MODEL:
     description: 'Claude model ID override'

@@ -565,8 +565,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      repository-advisories: write
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.ADVISORY_APP_ID }}
+          private-key: ${{ secrets.ADVISORY_APP_SECRET }}
+
       - uses: actions/download-artifact@v4
         with:
           name: ${{ needs.scan.outputs.artifact_name }}
@@ -577,8 +582,33 @@ jobs:
           SCAN_TYPE: image
           TARGET: registry.example.org/myapp:${{ github.sha }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 ```
+
+##### Prerequisites
+
+The two-job pattern above depends on a few things that consumers must
+set up once per repository (or at the org level) before the workflow
+can succeed. The default `GITHUB_TOKEN` cannot be granted advisory
+scope — `repository-advisories` is not a valid `GITHUB_TOKEN`
+permission key — so creating security advisories requires an
+installation token minted from a GitHub App.
+
+- **GitHub App — `imio-advisory-app`** (org-level, shared across IMIO repos):
+  - Repository permissions: *Repository security advisories* → **Read and write**.
+  - Webhook: **disabled**.
+  - Installed on every repo that runs this action.
+- **Secrets** (repo or org level):
+  - `ADVISORY_APP_ID` — numeric App ID.
+  - `ADVISORY_APP_SECRET` — full `.pem` private key, including the `-----BEGIN ...-----` and `-----END ...-----` lines.
+  - `ANTHROPIC_API_KEY` — Anthropic API key used by Claude.
+- **Environment — `security-review`** (repo Settings → Environments):
+  - **Required reviewers** enabled, with at least one reviewer from the security team.
+  - **Prevent self-review** enabled where the repo's review policy requires it (recommended on repos where the author must not be able to approve their own run).
+  - **Deployment branches** limited to the repository's protected branches (typically `main`, and `dev` if the repo uses one — adjust to match the branching model of the consuming repo).
+  - This is the manual-approval gate: the `claude-analysis` job queues until a reviewer clicks *Approve* on the workflow run page.
+  - On **private** repositories, protected environments require GitHub Team or Enterprise.
+- **Private vulnerability reporting** must be enabled on each consuming repo (Settings → Code security) before advisories can be created.
 
 ---
 ### claude-agent
