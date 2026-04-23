@@ -42,6 +42,10 @@ runs:
           echo "::error::JSON_FILE '$JSON_FILE' does not exist. Ensure trivy-scan-notify ran in the same job, or the artifact was downloaded in this job."
           exit 1
         fi
+        if ! python3 -m json.tool "$JSON_FILE" > /dev/null 2>&1; then
+          echo "::error::JSON_FILE '$JSON_FILE' is not valid JSON. It may be empty, truncated, or corrupted — re-run trivy-scan-notify or re-download the artifact."
+          exit 1
+        fi
 
     - name: Resolve SARIF category
       id: defaults
