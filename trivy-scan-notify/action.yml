@@ -68,6 +68,16 @@ inputs:
     description: 'Comma-separated severities Claude should create security advisories for (CRITICAL, HIGH, MEDIUM). Only takes effect when CLAUDE_ANALYSIS=true.'
     required: false
     default: 'CRITICAL,HIGH'
+outputs:
+  critical:
+    description: 'Number of CRITICAL findings'
+    value: ${{ steps.counts.outputs.critical }}
+  high:
+    description: 'Number of HIGH findings'
+    value: ${{ steps.counts.outputs.high }}
+  medium:
+    description: 'Number of MEDIUM findings'
+    value: ${{ steps.counts.outputs.medium }}
 runs:
   using: 'composite'
   steps:

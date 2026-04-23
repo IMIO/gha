@@ -382,6 +382,14 @@ External actions are pinned by SHA as required by the iMio security référentie
 | ANTHROPIC_API_KEY      |   no     | string  |                           | Anthropic API key, required when `CLAUDE_ANALYSIS=true`. Pass `secrets.ANTHROPIC_API_KEY`. |
 | CLAUDE_SEVERITIES      |   no     | string  | `"CRITICAL,HIGH"`         | Comma-separated severities Claude should create advisories for. Append `,MEDIUM` to include medium findings. |
 
+#### Outputs
+
+| name     | description |
+| -------- | ----------- |
+| critical | Number of CRITICAL findings |
+| high     | Number of HIGH findings |
+| medium   | Number of MEDIUM findings |
+
 #### Example of usage
 
 ```yaml
@@ -428,6 +436,53 @@ jobs:
           IMAGE_REF: ${{ github.repository }}:${{ github.sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+```
+
+#### Two-job pattern with manual approval
+
+Use this pattern to gate Claude analysis behind a human approval step. Job 1 scans and notifies; reviewers see the finding counts in Mattermost and approve job 2 only when Claude analysis is worth running. The prompt stays versioned inside the action — nothing is duplicated across repositories.
+
+> [!NOTE]
+> Create a `security-review` environment in repo Settings → Environments and add required reviewers before using this pattern.
+
+```yaml
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    outputs:
+      critical: ${{ steps.trivy.outputs.critical }}
+      high: ${{ steps.trivy.outputs.high }}
+    steps:
+      - uses: imio/gha/trivy-scan-notify@v7
+        id: trivy
+        with:
+          SCAN_TYPE: image
+          IMAGE_REF: registry.example.org/myapp:${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+
+  claude-analysis:
+    needs: scan
+    if: needs.scan.outputs.critical > 0 || needs.scan.outputs.high > 0
+    environment: security-review   # pauses for human approval
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      repository-advisories: write
+    steps:
+      - uses: imio/gha/trivy-scan-notify@v7
+        with:
+          SCAN_TYPE: image
+          IMAGE_REF: registry.example.org/myapp:${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLAUDE_ANALYSIS: 'true'
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EXIT_CODE: '0'         # findings already flagged in job 1
+          UPLOAD_SARIF: 'false'  # already uploaded in job 1
 ```
 
 ---

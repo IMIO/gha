@@ -12,6 +12,7 @@
   - `CLAUDE_SEVERITIES` input (default `CRITICAL,HIGH`) controls which severity levels are processed; append `,MEDIUM` to include medium findings
   - Advisories are deduplicated against existing drafts and processed in CRITICAL → HIGH → MEDIUM order
   - Requires `repository-advisories: write` permission in the calling workflow when `CLAUDE_ANALYSIS=true`
+  - Outputs `critical`, `high`, and `medium` (finding counts) are now exposed, enabling a two-job manual-approval pattern where job 1 scans and job 2 (gated by a GitHub Environment with required reviewers) runs Claude analysis without duplicating the prompt in caller repositories
 
 ## [v7.1.0] - 2026-04-21
 ### Added
