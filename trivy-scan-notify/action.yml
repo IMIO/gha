@@ -205,7 +205,7 @@ runs:
           **Findings:** CRITICAL=${{ steps.counts.outputs.critical }} HIGH=${{ steps.counts.outputs.high }} MEDIUM=${{ steps.counts.outputs.medium }}
 
     - name: Validate Claude analysis inputs
-      if: always() && inputs.CLAUDE_ANALYSIS == 'true'
+      if: always() && inputs.CLAUDE_ANALYSIS == 'true' && steps.defaults.outcome == 'success' && hashFiles(steps.defaults.outputs.json_file) != ''
       shell: bash
       run: |
         if [ -z "${{ inputs.ANTHROPIC_API_KEY }}" ]; then
@@ -218,7 +218,7 @@ runs:
         fi
 
     - name: Claude analysis of findings
-      if: always() && inputs.CLAUDE_ANALYSIS == 'true'
+      if: always() && inputs.CLAUDE_ANALYSIS == 'true' && steps.defaults.outcome == 'success' && hashFiles(steps.defaults.outputs.json_file) != ''
       uses: imio/gha/claude-agent@v7
       with:
         ANTHROPIC_API_KEY: ${{ inputs.ANTHROPIC_API_KEY }}
