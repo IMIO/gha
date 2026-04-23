@@ -477,10 +477,10 @@ Run a [Claude Code](https://docs.anthropic.com/claude/claude-code) agent with a 
 
 | name              | required | type   | default               | description |
 | ----------------- | -------- | ------ | --------------------- | ----------- |
-| prompt            |   yes    | string |                       | Instructions for Claude |
-| files             |   no     | string |                       | Newline-separated list of file paths to expose to Claude (appended to the prompt as a "Files to examine" section) |
+| PROMPT            |   yes    | string |                       | Instructions for Claude |
+| FILES             |   no     | string |                       | Newline-separated list of file paths to expose to Claude (appended to the prompt as a "Files to examine" section) |
 | ANTHROPIC_API_KEY |   yes    | string |                       | Anthropic API key. Pass `secrets.ANTHROPIC_API_KEY`. |
-| model             |   no     | string | `"claude-sonnet-4-6"` | Claude model ID |
+| MODEL             |   no     | string | `"claude-sonnet-4-6"` | Claude model ID |
 | GITHUB_TOKEN      |   no     | string |                       | GitHub token forwarded to Claude for GitHub API operations (e.g. creating security advisories). Pass `secrets.GITHUB_TOKEN`. |
 
 Claude's output is displayed in the GitHub Actions Step Summary (`display_report: true`).
@@ -499,10 +499,10 @@ jobs:
         with:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          prompt: |
+          PROMPT: |
             Review the dependency list and create a private draft security advisory
             for any known critical vulnerability you find.
-          files: |
+          FILES: |
             package.json
             requirements.txt
 ```

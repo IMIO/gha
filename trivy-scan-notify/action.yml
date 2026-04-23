@@ -210,8 +210,8 @@ runs:
       with:
         ANTHROPIC_API_KEY: ${{ inputs.ANTHROPIC_API_KEY }}
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
-        files: ${{ steps.defaults.outputs.json_file }}
-        prompt: |
+        FILES: ${{ steps.defaults.outputs.json_file }}
+        PROMPT: |
           You are analyzing a Trivy security scan report and creating private draft GitHub repository security advisories — one advisory per finding. Do not publish any advisory.
 
           ## Scan context

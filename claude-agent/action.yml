@@ -2,22 +2,22 @@ name: Claude agent
 description: Run a Claude Code agent with a given prompt, optionally focusing on specific files. Thin wrapper around anthropics/claude-code-action with sensible CI defaults.
 
 inputs:
-  prompt:
+  PROMPT:
     description: 'Instructions for Claude'
     required: true
-  files:
+  FILES:
     description: 'Newline-separated list of file paths to expose to Claude (appended to the prompt as context)'
     required: false
     default: ''
   ANTHROPIC_API_KEY:
     description: 'Anthropic API key (pass secrets.ANTHROPIC_API_KEY from the calling workflow)'
     required: true
-  model:
+  MODEL:
     description: 'Claude model ID'
     required: false
     default: 'claude-sonnet-4-6'
   GITHUB_TOKEN:
-    description: 'GitHub token forwarded to Claude for GitHub API operations (e.g. creating issues). Requires the appropriate permissions in the calling workflow (e.g. issues: write).'
+    description: 'GitHub token forwarded to Claude for GitHub API operations (e.g. creating security advisories). Requires the appropriate permissions in the calling workflow (e.g. repository-advisories: write).'
     required: false
     default: ''
 
@@ -28,8 +28,8 @@ runs:
       id: compose
       shell: bash
       env:
-        PROMPT: ${{ inputs.prompt }}
-        FILES: ${{ inputs.files }}
+        PROMPT: ${{ inputs.PROMPT }}
+        FILES: ${{ inputs.FILES }}
       run: |
         FULL_PROMPT="$PROMPT"
         if [ -n "$FILES" ]; then
@@ -49,5 +49,5 @@ runs:
         prompt: ${{ steps.compose.outputs.prompt }}
         anthropic_api_key: ${{ inputs.ANTHROPIC_API_KEY }}
         github_token: ${{ inputs.GITHUB_TOKEN }}
-        claude_args: '--model ${{ inputs.model }}'
+        claude_args: '--model ${{ inputs.MODEL }}'
         display_report: 'true'
