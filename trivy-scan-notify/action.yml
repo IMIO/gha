@@ -204,6 +204,19 @@ runs:
           **Target:** ${{ inputs.SCAN_TYPE == 'image' && inputs.IMAGE_REF || inputs.SCAN_REF }}
           **Findings:** CRITICAL=${{ steps.counts.outputs.critical }} HIGH=${{ steps.counts.outputs.high }} MEDIUM=${{ steps.counts.outputs.medium }}
 
+    - name: Validate Claude analysis inputs
+      if: always() && inputs.CLAUDE_ANALYSIS == 'true'
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.ANTHROPIC_API_KEY }}" ]; then
+          echo "::error::CLAUDE_ANALYSIS=true but ANTHROPIC_API_KEY is empty. Pass secrets.ANTHROPIC_API_KEY to this action."
+          exit 1
+        fi
+        if [ -z "${{ inputs.GITHUB_TOKEN }}" ]; then
+          echo "::error::CLAUDE_ANALYSIS=true but GITHUB_TOKEN is empty. Pass secrets.GITHUB_TOKEN and grant repository-advisories: write in the calling workflow."
+          exit 1
+        fi
+
     - name: Claude analysis of findings
       if: always() && inputs.CLAUDE_ANALYSIS == 'true'
       uses: imio/gha/claude-agent@v7
