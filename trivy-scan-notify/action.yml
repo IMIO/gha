@@ -57,7 +57,7 @@ inputs:
     required: false
     default: ''
   CLAUDE_ANALYSIS:
-    description: 'Set to "true" to invoke Claude to analyze CRITICAL and HIGH findings and propose fixes (requires ANTHROPIC_API_KEY)'
+    description: 'Set to "true" to invoke Claude to create private draft security advisories for findings at the severities defined by CLAUDE_SEVERITIES (requires ANTHROPIC_API_KEY and GITHUB_TOKEN)'
     required: false
     default: 'false'
   ANTHROPIC_API_KEY:
