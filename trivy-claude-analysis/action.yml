@@ -78,8 +78,10 @@ runs:
           - Severities to process: ${{ inputs.SEVERITIES }}
           - Code Scanning report: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning?query=is:open+tool:${{ steps.defaults.outputs.sarif_category }}
 
-          ## Trivy JSON structure
-          The report has `Results[].Vulnerabilities[]` (CVEs, each with `VulnerabilityID`, `PkgName`, `InstalledVersion`, `FixedVersion`, `Severity`, `CVSS.nvd.V3Score`) and `Results[].Misconfigurations[]` (each with `ID`, `Title`, `Severity`). `Results[].Type` indicates the package ecosystem (e.g. `debian`, `npm`, `pip`, `gem`).
+          ## Trivy JSON structure — scope
+          Process **only** `Results[].Vulnerabilities[]` entries (CVEs), each with `VulnerabilityID`, `PkgName`, `InstalledVersion`, `FixedVersion`, `Severity`, `CVSS.nvd.V3Score`. `Results[].Type` indicates the package ecosystem (e.g. `debian`, `npm`, `pip`, `gem`).
+
+          **Ignore** `Results[].Misconfigurations[]`, `Results[].Secrets[]`, and any other non-CVE finding types. They do not have a package associated with them and do not fit the GitHub Security Advisory model, which requires an ecosystem + package name. These findings are already surfaced through the SARIF upload to Code Scanning (see the "Code Scanning report" link in the Scan context).
 
           ## How to create a security advisory
           Build the `vulnerabilities` array entry, then POST:
@@ -110,8 +112,8 @@ runs:
           Run `gh api "/repos/$GITHUB_REPOSITORY/security-advisories?state=draft&per_page=100" --jq '.[].summary'` and collect existing summaries. For each finding, skip creating an advisory if an existing draft already contains the CVE ID or vulnerability name in its summary.
 
           ## Step 2 — Create one advisory per finding
-          Process only the severities listed in "Severities to process" above (case-insensitive). For each matching finding in the JSON, create one advisory with:
-          - **summary**: `<SEVERITY>: <VulnerabilityID-or-Title> in <PkgName>@<InstalledVersion>`
+          Iterate over `Results[].Vulnerabilities[]` only (ignore other finding types per the scope rule above). Process only entries whose `Severity` is in the "Severities to process" list (case-insensitive). For each matching vulnerability, create one advisory with:
+          - **summary**: `<SEVERITY>: <VulnerabilityID> in <PkgName>@<InstalledVersion>`
           - **severity**: severity in lowercase (`critical`, `high`, or `medium`)
           - **description** (markdown):
             * **CVE / ID**: link to https://nvd.nist.gov/vuln/detail/<CVE> if a CVE ID is present
@@ -124,5 +126,5 @@ runs:
             * **Detected in**: `${{ github.sha }}` (`${{ github.ref_name }}`)
             * **Code Scanning**: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning?query=is:open+tool:${{ steps.defaults.outputs.sarif_category }}
 
-          Process findings in severity order: CRITICAL first, then HIGH, then MEDIUM.
-          At the end, print a summary: how many advisories were created, skipped (duplicate), and skipped (severity not in scope).
+          Process vulnerabilities in severity order: CRITICAL first, then HIGH, then MEDIUM.
+          At the end, print a summary: how many advisories were created, skipped (duplicate), skipped (severity not in scope), and the count of non-vulnerability findings (misconfigurations, secrets, etc.) that were ignored — refer reviewers to the Code Scanning report link for those.
