@@ -238,15 +238,29 @@ runs:
           The report has `Results[].Vulnerabilities[]` (CVEs, each with `VulnerabilityID`, `PkgName`, `InstalledVersion`, `FixedVersion`, `Severity`, `CVSS.nvd.V3Score`) and `Results[].Misconfigurations[]` (each with `ID`, `Title`, `Severity`). `Results[].Type` indicates the package ecosystem (e.g. `debian`, `npm`, `pip`, `gem`).
 
           ## How to create a security advisory
+          Build the `vulnerabilities` array entry, then POST:
           ```bash
           gh api --method POST "/repos/$GITHUB_REPOSITORY/security-advisories" \
             --field summary="<title>" \
             --field description="<markdown body>" \
             --field severity="<critical|high|medium>" \
-            --field 'vulnerabilities=[{"package":{"ecosystem":"<type-or-other>","name":"<PkgName>"},"vulnerable_version_range":"= <InstalledVersion>","patched_versions":"<FixedVersion>"}]'
+            --field 'vulnerabilities=[{"package":{"ecosystem":"<ecosystem>","name":"<PkgName>"},"vulnerable_version_range":"= <InstalledVersion>"}]'
           ```
-          Use `ecosystem` from `Results[].Type` when it matches a known value (npm, pip, gem, go, maven, nuget, rust-crate, erlang, pub); otherwise use `other`.
-          Omit `patched_versions` from the payload if `FixedVersion` is empty.
+          Add `"patched_versions":"<FixedVersion>"` to the vulnerability object **only** when `FixedVersion` is non-empty and non-null; omit the field entirely otherwise.
+
+          Derive `ecosystem` from `Results[].Type` using this mapping (GitHub advisory API values):
+          | Results[].Type | ecosystem to use |
+          |----------------|-----------------|
+          | npm            | npm             |
+          | pip            | pip             |
+          | go             | go              |
+          | maven          | maven           |
+          | nuget          | nuget           |
+          | pub            | pub             |
+          | erlang         | erlang          |
+          | gem            | rubygems        |
+          | rust-crate     | rust            |
+          | anything else (debian, alpine, ubuntu, rpm, etc.) | other |
 
           ## Step 1 — Deduplicate
           Run `gh api "/repos/$GITHUB_REPOSITORY/security-advisories?state=draft&per_page=100" --jq '.[].summary'` and collect existing summaries. For each finding, skip creating an advisory if an existing draft already contains the CVE ID or vulnerability name in its summary.
