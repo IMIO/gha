@@ -64,14 +64,10 @@ inputs:
     description: 'Anthropic API key, required when CLAUDE_ANALYSIS=true (pass secrets.ANTHROPIC_API_KEY)'
     required: false
     default: ''
-  CLAUDE_MAX_ADVISORIES:
-    description: 'Maximum number of individual security advisories to create for CRITICAL findings. If the count exceeds this, a single summary advisory is created instead. Set to 0 to always use a summary.'
+  CLAUDE_SEVERITIES:
+    description: 'Comma-separated severities Claude should create security advisories for (CRITICAL, HIGH, MEDIUM). Only takes effect when CLAUDE_ANALYSIS=true.'
     required: false
-    default: '10'
-  CLAUDE_ANALYZE_MEDIUM:
-    description: 'Set to "true" to also create a summary security advisory for MEDIUM findings (requires CLAUDE_ANALYSIS=true)'
-    required: false
-    default: 'false'
+    default: 'CRITICAL,HIGH'
 runs:
   using: 'composite'
   steps:
@@ -216,37 +212,36 @@ runs:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
         files: ${{ steps.defaults.outputs.json_file }}
         prompt: |
-          You are analyzing a Trivy security scan report and creating private GitHub repository security advisories for actionable findings.
-          Advisories are draft and private by default — do not publish them.
+          You are analyzing a Trivy security scan report and creating private draft GitHub repository security advisories — one advisory per finding. Do not publish any advisory.
 
           ## Scan context
           - Type: ${{ inputs.SCAN_TYPE }}
           - Target: ${{ inputs.SCAN_TYPE == 'image' && inputs.IMAGE_REF || inputs.SCAN_REF }}
           - Commit: ${{ github.sha }} (branch: ${{ github.ref_name }})
+          - Severities to process: ${{ inputs.CLAUDE_SEVERITIES }}
           - Code Scanning report: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning?query=is:open+tool:${{ steps.defaults.outputs.sarif_category }}
 
           ## Trivy JSON structure
           The report has `Results[].Vulnerabilities[]` (CVEs, each with `VulnerabilityID`, `PkgName`, `InstalledVersion`, `FixedVersion`, `Severity`, `CVSS.nvd.V3Score`) and `Results[].Misconfigurations[]` (each with `ID`, `Title`, `Severity`). `Results[].Type` indicates the package ecosystem (e.g. `debian`, `npm`, `pip`, `gem`).
 
           ## How to create a security advisory
-          Use the GitHub API. For each advisory, build a JSON payload and post it:
           ```bash
           gh api --method POST "/repos/$GITHUB_REPOSITORY/security-advisories" \
             --field summary="<title>" \
             --field description="<markdown body>" \
             --field severity="<critical|high|medium>" \
-            --field 'vulnerabilities=[{"package":{"ecosystem":"<type-or-other>","name":"<PkgName>"},"vulnerable_version_range":"= <InstalledVersion>","patched_versions":"<FixedVersion or null>"}]'
+            --field 'vulnerabilities=[{"package":{"ecosystem":"<type-or-other>","name":"<PkgName>"},"vulnerable_version_range":"= <InstalledVersion>","patched_versions":"<FixedVersion>"}]'
           ```
           Use `ecosystem` from `Results[].Type` when it matches a known value (npm, pip, gem, go, maven, nuget, rust-crate, erlang, pub); otherwise use `other`.
-          If `FixedVersion` is empty, omit `patched_versions` from the payload.
+          Omit `patched_versions` from the payload if `FixedVersion` is empty.
 
           ## Step 1 — Deduplicate
-          Run `gh api "/repos/$GITHUB_REPOSITORY/security-advisories?state=draft&per_page=100" --jq '.[].summary'` and collect existing summaries. Skip creating an advisory if an existing one already contains the CVE ID or vulnerability name.
+          Run `gh api "/repos/$GITHUB_REPOSITORY/security-advisories?state=draft&per_page=100" --jq '.[].summary'` and collect existing summaries. For each finding, skip creating an advisory if an existing draft already contains the CVE ID or vulnerability name in its summary.
 
-          ## Step 2 — CRITICAL findings
-          Count all CRITICAL findings. If the count is within the cap (${{ inputs.CLAUDE_MAX_ADVISORIES }}), create one advisory per finding with:
-          - **summary**: `CRITICAL: <VulnerabilityID-or-Title> in <PkgName>@<InstalledVersion>`
-          - **severity**: `critical`
+          ## Step 2 — Create one advisory per finding
+          Process only the severities listed in "Severities to process" above (case-insensitive). For each matching finding in the JSON, create one advisory with:
+          - **summary**: `<SEVERITY>: <VulnerabilityID-or-Title> in <PkgName>@<InstalledVersion>`
+          - **severity**: severity in lowercase (`critical`, `high`, or `medium`)
           - **description** (markdown):
             * **CVE / ID**: link to https://nvd.nist.gov/vuln/detail/<CVE> if a CVE ID is present
             * **CVSS v3 score**: include if present in the JSON
@@ -258,20 +253,8 @@ runs:
             * **Detected in**: `${{ github.sha }}` (`${{ github.ref_name }}`)
             * **Code Scanning**: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning?query=is:open+tool:${{ steps.defaults.outputs.sarif_category }}
 
-          If the count exceeds the cap, create a single CRITICAL summary advisory instead (same body format as the HIGH summary below, summary field `CRITICAL findings summary — Trivy ${{ inputs.SCAN_TYPE }} scan`, severity `critical`).
-
-          ## Step 3 — HIGH findings
-          Create a single summary advisory (skip entirely if there are zero HIGH findings):
-          - **summary**: `HIGH findings summary — Trivy ${{ inputs.SCAN_TYPE }} scan`
-          - **severity**: `high`
-          - **description**: Markdown table `| Name | CVE | CVSS | Affected component & version | Fix version | Remediation |`, a short paragraph assessing overall HIGH risk exposure, a detected-in line (`${{ github.sha }}` / `${{ github.ref_name }}`), and the Code Scanning link.
-
-          ## Step 4 — MEDIUM findings (optional)
-          Only run this step if CLAUDE_ANALYZE_MEDIUM is true: ${{ inputs.CLAUDE_ANALYZE_MEDIUM }}
-          Create a single summary advisory (skip entirely if there are zero MEDIUM findings):
-          - **summary**: `MEDIUM findings summary — Trivy ${{ inputs.SCAN_TYPE }} scan`
-          - **severity**: `medium`
-          - **description**: Same table format as the HIGH summary above.
+          Process findings in severity order: CRITICAL first, then HIGH, then MEDIUM.
+          At the end, print a summary: how many advisories were created, skipped (duplicate), and skipped (severity not in scope).
 
     - name: Re-raise scan failure
       if: steps.scan.outcome == 'failure' && inputs.EXIT_CODE != '0'

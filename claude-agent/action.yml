@@ -15,7 +15,7 @@ inputs:
   model:
     description: 'Claude model ID'
     required: false
-    default: 'claude-haiku-4-5-20251001'
+    default: 'claude-sonnet-4-6'
   GITHUB_TOKEN:
     description: 'GitHub token forwarded to Claude for GitHub API operations (e.g. creating issues). Requires the appropriate permissions in the calling workflow (e.g. issues: write).'
     required: false
