@@ -1,0 +1,53 @@
+name: Claude agent
+description: Run a Claude Code agent with a given prompt, optionally focusing on specific files. Thin wrapper around anthropics/claude-code-action with sensible CI defaults.
+
+inputs:
+  prompt:
+    description: 'Instructions for Claude'
+    required: true
+  files:
+    description: 'Newline-separated list of file paths to expose to Claude (appended to the prompt as context)'
+    required: false
+    default: ''
+  ANTHROPIC_API_KEY:
+    description: 'Anthropic API key (pass secrets.ANTHROPIC_API_KEY from the calling workflow)'
+    required: true
+  model:
+    description: 'Claude model ID'
+    required: false
+    default: 'claude-haiku-4-5-20251001'
+  GITHUB_TOKEN:
+    description: 'GitHub token forwarded to Claude for GitHub API operations (e.g. creating issues). Requires the appropriate permissions in the calling workflow (e.g. issues: write).'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Compose prompt
+      id: compose
+      shell: bash
+      env:
+        PROMPT: ${{ inputs.prompt }}
+        FILES: ${{ inputs.files }}
+      run: |
+        FULL_PROMPT="$PROMPT"
+        if [ -n "$FILES" ]; then
+          FILES_LIST=$(printf '%s' "$FILES" | sed '/^[[:space:]]*$/d' | sed 's/^/- /')
+          FULL_PROMPT="${FULL_PROMPT}"$'\n\n'"Files to examine:"$'\n'"${FILES_LIST}"
+        fi
+        DELIMITER="PROMPT_EOF_$(openssl rand -hex 8)"
+        {
+          echo "prompt<<$DELIMITER"
+          printf '%s\n' "$FULL_PROMPT"
+          echo "$DELIMITER"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Run Claude agent
+      uses: anthropics/claude-code-action@b4d67413279fc18c6e5de930ae307c4f108714eb  # v1
+      with:
+        prompt: ${{ steps.compose.outputs.prompt }}
+        anthropic_api_key: ${{ inputs.ANTHROPIC_API_KEY }}
+        github_token: ${{ inputs.GITHUB_TOKEN }}
+        claude_args: '--model ${{ inputs.model }}'
+        display_report: 'true'
