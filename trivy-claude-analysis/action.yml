@@ -1,0 +1,124 @@
+name: Trivy Claude analysis
+description: Analyze a Trivy JSON scan report with Claude and create private draft GitHub security advisories — one per finding.
+
+inputs:
+  JSON_FILE:
+    description: 'Path to the Trivy JSON report produced by trivy-scan-notify (e.g. trivy-image.json)'
+    required: true
+  SCAN_TYPE:
+    description: 'Trivy scan type (image, fs, config) — used for prompt context and advisory titling'
+    required: true
+  TARGET:
+    description: 'What was scanned (image reference or scan path) — used for prompt context'
+    required: true
+  SARIF_CATEGORY:
+    description: 'SARIF category from the originating scan — used to link advisories to the Code Scanning report (defaults to trivy-<SCAN_TYPE>)'
+    required: false
+    default: ''
+  SEVERITIES:
+    description: 'Comma-separated severities Claude should create security advisories for (CRITICAL, HIGH, MEDIUM).'
+    required: false
+    default: 'CRITICAL,HIGH'
+  ANTHROPIC_API_KEY:
+    description: 'Anthropic API key. Pass secrets.ANTHROPIC_API_KEY from the calling workflow.'
+    required: true
+  GITHUB_TOKEN:
+    description: 'GitHub token with repository-advisories: write. Pass secrets.GITHUB_TOKEN from the calling workflow.'
+    required: true
+  MODEL:
+    description: 'Claude model ID override'
+    required: false
+    default: 'claude-sonnet-4-6'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        JSON_FILE: ${{ inputs.JSON_FILE }}
+      run: |
+        if [ ! -f "$JSON_FILE" ]; then
+          echo "::error::JSON_FILE '$JSON_FILE' does not exist. Ensure trivy-scan-notify ran in the same job, or the artifact was downloaded in this job."
+          exit 1
+        fi
+
+    - name: Resolve SARIF category
+      id: defaults
+      shell: bash
+      env:
+        SARIF_CATEGORY_IN: ${{ inputs.SARIF_CATEGORY }}
+        SCAN_TYPE: ${{ inputs.SCAN_TYPE }}
+      run: |
+        if [ -n "$SARIF_CATEGORY_IN" ]; then
+          CATEGORY="$SARIF_CATEGORY_IN"
+        else
+          CATEGORY="trivy-$SCAN_TYPE"
+        fi
+        echo "sarif_category=$CATEGORY" >> "$GITHUB_OUTPUT"
+
+    - name: Run Claude advisory analysis
+      uses: imio/gha/claude-agent@v7
+      with:
+        ANTHROPIC_API_KEY: ${{ inputs.ANTHROPIC_API_KEY }}
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+        MODEL: ${{ inputs.MODEL }}
+        FILES: ${{ inputs.JSON_FILE }}
+        PROMPT: |
+          You are analyzing a Trivy security scan report and creating private draft GitHub repository security advisories — one advisory per finding. Do not publish any advisory.
+
+          ## Scan context
+          - Type: ${{ inputs.SCAN_TYPE }}
+          - Target: ${{ inputs.TARGET }}
+          - Commit: ${{ github.sha }} (branch: ${{ github.ref_name }})
+          - Severities to process: ${{ inputs.SEVERITIES }}
+          - Code Scanning report: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning?query=is:open+tool:${{ steps.defaults.outputs.sarif_category }}
+
+          ## Trivy JSON structure
+          The report has `Results[].Vulnerabilities[]` (CVEs, each with `VulnerabilityID`, `PkgName`, `InstalledVersion`, `FixedVersion`, `Severity`, `CVSS.nvd.V3Score`) and `Results[].Misconfigurations[]` (each with `ID`, `Title`, `Severity`). `Results[].Type` indicates the package ecosystem (e.g. `debian`, `npm`, `pip`, `gem`).
+
+          ## How to create a security advisory
+          Build the `vulnerabilities` array entry, then POST:
+          ```bash
+          gh api --method POST "/repos/$GITHUB_REPOSITORY/security-advisories" \
+            --field summary="<title>" \
+            --field description="<markdown body>" \
+            --field severity="<critical|high|medium>" \
+            --field 'vulnerabilities=[{"package":{"ecosystem":"<ecosystem>","name":"<PkgName>"},"vulnerable_version_range":"= <InstalledVersion>"}]'
+          ```
+          Add `"patched_versions":"<FixedVersion>"` to the vulnerability object **only** when `FixedVersion` is non-empty and non-null; omit the field entirely otherwise.
+
+          Derive `ecosystem` from `Results[].Type` using this mapping (GitHub advisory API values):
+          | Results[].Type | ecosystem to use |
+          |----------------|-----------------|
+          | npm            | npm             |
+          | pip            | pip             |
+          | go             | go              |
+          | maven          | maven           |
+          | nuget          | nuget           |
+          | pub            | pub             |
+          | erlang         | erlang          |
+          | gem            | rubygems        |
+          | rust-crate     | rust            |
+          | anything else (debian, alpine, ubuntu, rpm, etc.) | other |
+
+          ## Step 1 — Deduplicate
+          Run `gh api "/repos/$GITHUB_REPOSITORY/security-advisories?state=draft&per_page=100" --jq '.[].summary'` and collect existing summaries. For each finding, skip creating an advisory if an existing draft already contains the CVE ID or vulnerability name in its summary.
+
+          ## Step 2 — Create one advisory per finding
+          Process only the severities listed in "Severities to process" above (case-insensitive). For each matching finding in the JSON, create one advisory with:
+          - **summary**: `<SEVERITY>: <VulnerabilityID-or-Title> in <PkgName>@<InstalledVersion>`
+          - **severity**: severity in lowercase (`critical`, `high`, or `medium`)
+          - **description** (markdown):
+            * **CVE / ID**: link to https://nvd.nist.gov/vuln/detail/<CVE> if a CVE ID is present
+            * **CVSS v3 score**: include if present in the JSON
+            * **Affected**: `<PkgName> <InstalledVersion>` → fix: `<FixedVersion>` (or "no fix available")
+            * **What it is**: concise technical description of the flaw class (RCE, SSRF, auth bypass, etc.)
+            * **Project impact**: state what you can infer from the component's role; explicitly note that code-path reachability cannot be determined without manual review
+            * **Exploitation conditions**: network access required? auth needed? special config? Rate the realistic risk as Low / Medium / High given the likely deployment context
+            * **Remediation**: upgrade command or config change
+            * **Detected in**: `${{ github.sha }}` (`${{ github.ref_name }}`)
+            * **Code Scanning**: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning?query=is:open+tool:${{ steps.defaults.outputs.sarif_category }}
+
+          Process findings in severity order: CRITICAL first, then HIGH, then MEDIUM.
+          At the end, print a summary: how many advisories were created, skipped (duplicate), and skipped (severity not in scope).

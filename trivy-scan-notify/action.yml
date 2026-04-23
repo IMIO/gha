@@ -56,18 +56,6 @@ inputs:
     description: 'Webhook URL for Mattermost notification. If empty, notification is skipped.'
     required: false
     default: ''
-  CLAUDE_ANALYSIS:
-    description: 'Set to "true" to invoke Claude to create private draft security advisories for findings at the severities defined by CLAUDE_SEVERITIES (requires ANTHROPIC_API_KEY and GITHUB_TOKEN)'
-    required: false
-    default: 'false'
-  ANTHROPIC_API_KEY:
-    description: 'Anthropic API key, required when CLAUDE_ANALYSIS=true (pass secrets.ANTHROPIC_API_KEY)'
-    required: false
-    default: ''
-  CLAUDE_SEVERITIES:
-    description: 'Comma-separated severities Claude should create security advisories for (CRITICAL, HIGH, MEDIUM). Only takes effect when CLAUDE_ANALYSIS=true.'
-    required: false
-    default: 'CRITICAL,HIGH'
 outputs:
   critical:
     description: 'Number of CRITICAL findings'
@@ -78,6 +66,12 @@ outputs:
   medium:
     description: 'Number of MEDIUM findings'
     value: ${{ steps.counts.outputs.medium }}
+  json_file:
+    description: 'Filename of the Trivy JSON report (relative to the workspace), for use with trivy-claude-analysis in the same job'
+    value: ${{ steps.defaults.outputs.json_file }}
+  artifact_name:
+    description: 'Name of the uploaded Trivy JSON workflow artifact, for use with actions/download-artifact in a later job'
+    value: trivy-${{ inputs.SCAN_TYPE }}-json-${{ github.sha }}
 runs:
   using: 'composite'
   steps:
@@ -200,6 +194,14 @@ runs:
         path: ${{ steps.defaults.outputs.sarif_file }}
         retention-days: 14
 
+    - name: Upload Trivy JSON as workflow artifact
+      if: always() && hashFiles(steps.defaults.outputs.json_file) != ''
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      with:
+        name: trivy-${{ inputs.SCAN_TYPE }}-json-${{ github.sha }}
+        path: ${{ steps.defaults.outputs.json_file }}
+        retention-days: 14
+
     - name: Notify on Mattermost
       if: always()
       uses: imio/gha/mattermost-notify@v7
@@ -213,85 +215,6 @@ runs:
           **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
           **Target:** ${{ inputs.SCAN_TYPE == 'image' && inputs.IMAGE_REF || inputs.SCAN_REF }}
           **Findings:** CRITICAL=${{ steps.counts.outputs.critical }} HIGH=${{ steps.counts.outputs.high }} MEDIUM=${{ steps.counts.outputs.medium }}
-
-    - name: Validate Claude analysis inputs
-      if: always() && inputs.CLAUDE_ANALYSIS == 'true' && steps.defaults.outcome == 'success' && hashFiles(steps.defaults.outputs.json_file) != ''
-      shell: bash
-      run: |
-        if [ -z "${{ inputs.ANTHROPIC_API_KEY }}" ]; then
-          echo "::error::CLAUDE_ANALYSIS=true but ANTHROPIC_API_KEY is empty. Pass secrets.ANTHROPIC_API_KEY to this action."
-          exit 1
-        fi
-        if [ -z "${{ inputs.GITHUB_TOKEN }}" ]; then
-          echo "::error::CLAUDE_ANALYSIS=true but GITHUB_TOKEN is empty. Pass secrets.GITHUB_TOKEN and grant repository-advisories: write in the calling workflow."
-          exit 1
-        fi
-
-    - name: Claude analysis of findings
-      if: always() && inputs.CLAUDE_ANALYSIS == 'true' && steps.defaults.outcome == 'success' && hashFiles(steps.defaults.outputs.json_file) != ''
-      uses: imio/gha/claude-agent@v7
-      with:
-        ANTHROPIC_API_KEY: ${{ inputs.ANTHROPIC_API_KEY }}
-        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
-        FILES: ${{ steps.defaults.outputs.json_file }}
-        PROMPT: |
-          You are analyzing a Trivy security scan report and creating private draft GitHub repository security advisories — one advisory per finding. Do not publish any advisory.
-
-          ## Scan context
-          - Type: ${{ inputs.SCAN_TYPE }}
-          - Target: ${{ inputs.SCAN_TYPE == 'image' && inputs.IMAGE_REF || inputs.SCAN_REF }}
-          - Commit: ${{ github.sha }} (branch: ${{ github.ref_name }})
-          - Severities to process: ${{ inputs.CLAUDE_SEVERITIES }}
-          - Code Scanning report: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning?query=is:open+tool:${{ steps.defaults.outputs.sarif_category }}
-
-          ## Trivy JSON structure
-          The report has `Results[].Vulnerabilities[]` (CVEs, each with `VulnerabilityID`, `PkgName`, `InstalledVersion`, `FixedVersion`, `Severity`, `CVSS.nvd.V3Score`) and `Results[].Misconfigurations[]` (each with `ID`, `Title`, `Severity`). `Results[].Type` indicates the package ecosystem (e.g. `debian`, `npm`, `pip`, `gem`).
-
-          ## How to create a security advisory
-          Build the `vulnerabilities` array entry, then POST:
-          ```bash
-          gh api --method POST "/repos/$GITHUB_REPOSITORY/security-advisories" \
-            --field summary="<title>" \
-            --field description="<markdown body>" \
-            --field severity="<critical|high|medium>" \
-            --field 'vulnerabilities=[{"package":{"ecosystem":"<ecosystem>","name":"<PkgName>"},"vulnerable_version_range":"= <InstalledVersion>"}]'
-          ```
-          Add `"patched_versions":"<FixedVersion>"` to the vulnerability object **only** when `FixedVersion` is non-empty and non-null; omit the field entirely otherwise.
-
-          Derive `ecosystem` from `Results[].Type` using this mapping (GitHub advisory API values):
-          | Results[].Type | ecosystem to use |
-          |----------------|-----------------|
-          | npm            | npm             |
-          | pip            | pip             |
-          | go             | go              |
-          | maven          | maven           |
-          | nuget          | nuget           |
-          | pub            | pub             |
-          | erlang         | erlang          |
-          | gem            | rubygems        |
-          | rust-crate     | rust            |
-          | anything else (debian, alpine, ubuntu, rpm, etc.) | other |
-
-          ## Step 1 — Deduplicate
-          Run `gh api "/repos/$GITHUB_REPOSITORY/security-advisories?state=draft&per_page=100" --jq '.[].summary'` and collect existing summaries. For each finding, skip creating an advisory if an existing draft already contains the CVE ID or vulnerability name in its summary.
-
-          ## Step 2 — Create one advisory per finding
-          Process only the severities listed in "Severities to process" above (case-insensitive). For each matching finding in the JSON, create one advisory with:
-          - **summary**: `<SEVERITY>: <VulnerabilityID-or-Title> in <PkgName>@<InstalledVersion>`
-          - **severity**: severity in lowercase (`critical`, `high`, or `medium`)
-          - **description** (markdown):
-            * **CVE / ID**: link to https://nvd.nist.gov/vuln/detail/<CVE> if a CVE ID is present
-            * **CVSS v3 score**: include if present in the JSON
-            * **Affected**: `<PkgName> <InstalledVersion>` → fix: `<FixedVersion>` (or "no fix available")
-            * **What it is**: concise technical description of the flaw class (RCE, SSRF, auth bypass, etc.)
-            * **Project impact**: state what you can infer from the component's role; explicitly note that code-path reachability cannot be determined without manual review
-            * **Exploitation conditions**: network access required? auth needed? special config? Rate the realistic risk as Low / Medium / High given the likely deployment context
-            * **Remediation**: upgrade command or config change
-            * **Detected in**: `${{ github.sha }}` (`${{ github.ref_name }}`)
-            * **Code Scanning**: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning?query=is:open+tool:${{ steps.defaults.outputs.sarif_category }}
-
-          Process findings in severity order: CRITICAL first, then HIGH, then MEDIUM.
-          At the end, print a summary: how many advisories were created, skipped (duplicate), and skipped (severity not in scope).
 
     - name: Re-raise scan failure
       if: steps.scan.outcome == 'failure' && inputs.EXIT_CODE != '0'
