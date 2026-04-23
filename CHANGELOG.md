@@ -1,5 +1,23 @@
 # Changelog
 
+## [v7.2.0] - 2026-04-23
+### Added
+- claude-agent
+  - New composite action wrapping `anthropics/claude-code-action` (SHA-pinned) for running a Claude Code agent in CI pipelines
+  - Accepts a `PROMPT`, an optional newline-separated list of `FILES` to expose, a `MODEL` override (default `claude-sonnet-4-6`), and an optional `GITHUB_TOKEN` for GitHub API operations
+  - Claude output is displayed in the GitHub Actions Step Summary
+- trivy-claude-analysis
+  - New composite action that reads a Trivy JSON report and asks Claude to create one private draft GitHub security advisory per finding
+  - Takes a `JSON_FILE` path (from `trivy-scan-notify`'s `json_file` output in the same job, or from `actions/download-artifact` in a later job)
+  - `SEVERITIES` input (default `CRITICAL,HIGH`) controls which severity levels are processed; append `,MEDIUM` to include medium findings
+  - Advisories are deduplicated against existing drafts and processed in CRITICAL → HIGH → MEDIUM order
+  - Requires `repository-advisories: write` permission in the calling workflow
+  - Enables a two-job manual-approval pattern: job 1 scans and uploads the JSON artifact, job 2 (gated by a GitHub Environment with required reviewers) downloads the exact artifact and runs Claude — no re-scan, no state drift, no `EXIT_CODE: '0'` hack
+### Changed
+- trivy-scan-notify
+  - Now uploads the Trivy JSON report as a workflow artifact (14-day retention) in addition to the SARIF artifact
+  - Exposes outputs `critical`, `high`, `medium`, `json_file`, and `artifact_name` for chaining with `trivy-claude-analysis`
+
 ## [v7.1.0] - 2026-04-21
 ### Added
 - trivy-scan-notify

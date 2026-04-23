@@ -56,6 +56,22 @@ inputs:
     description: 'Webhook URL for Mattermost notification. If empty, notification is skipped.'
     required: false
     default: ''
+outputs:
+  critical:
+    description: 'Number of CRITICAL findings'
+    value: ${{ steps.counts.outputs.critical }}
+  high:
+    description: 'Number of HIGH findings'
+    value: ${{ steps.counts.outputs.high }}
+  medium:
+    description: 'Number of MEDIUM findings'
+    value: ${{ steps.counts.outputs.medium }}
+  json_file:
+    description: 'Filename of the Trivy JSON report (relative to the workspace), for use with trivy-claude-analysis in the same job'
+    value: ${{ steps.defaults.outputs.json_file }}
+  artifact_name:
+    description: 'Name of the uploaded Trivy JSON workflow artifact, for use with actions/download-artifact in a later job'
+    value: trivy-${{ inputs.SCAN_TYPE }}-json-${{ github.sha }}
 runs:
   using: 'composite'
   steps:
@@ -176,6 +192,14 @@ runs:
       with:
         name: trivy-${{ inputs.SCAN_TYPE }}-${{ github.sha }}
         path: ${{ steps.defaults.outputs.sarif_file }}
+        retention-days: 14
+
+    - name: Upload Trivy JSON as workflow artifact
+      if: always() && hashFiles(steps.defaults.outputs.json_file) != ''
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      with:
+        name: trivy-${{ inputs.SCAN_TYPE }}-json-${{ github.sha }}
+        path: ${{ steps.defaults.outputs.json_file }}
         retention-days: 14
 
     - name: Notify on Mattermost

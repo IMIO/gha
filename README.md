@@ -48,6 +48,12 @@ This repository hosts a set of github actions we use to deploy our apps.
     - [trivy-sbom-notify](#trivy-sbom-notify)
       - [Inputs](#inputs-12)
       - [Example of usage](#example-of-usage-13)
+    - [trivy-claude-analysis](#trivy-claude-analysis)
+      - [Inputs](#inputs-13)
+      - [Example of usage](#example-of-usage-14)
+    - [claude-agent](#claude-agent)
+      - [Inputs](#inputs-14)
+      - [Example of usage](#example-of-usage-15)
   - [Contribute](#contribute)
     - [Release](#release)
 
@@ -374,6 +380,16 @@ External actions are pinned by SHA as required by the iMio security référentie
 | GITHUB_TOKEN           |   no     | string  |                           | Pass `secrets.GITHUB_TOKEN` to avoid Trivy DB rate-limits |
 | MATTERMOST_WEBHOOK_URL |   no     | string  |                           | Webhook URL to send notifications on Mattermost |
 
+#### Outputs
+
+| name          | description |
+| ------------- | ----------- |
+| critical      | Number of CRITICAL findings |
+| high          | Number of HIGH findings |
+| medium        | Number of MEDIUM findings |
+| json_file     | Filename of the Trivy JSON report (relative to the workspace) — use as `JSON_FILE` input to `trivy-claude-analysis` in the same job |
+| artifact_name | Name of the uploaded Trivy JSON workflow artifact — use with `actions/download-artifact` in a later job |
+
 #### Example of usage
 
 ```yaml
@@ -422,6 +438,8 @@ jobs:
           MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
 ```
 
+To run Claude on the scan results — either immediately in the same job, or after a manual approval step in a second job — see [`trivy-claude-analysis`](#trivy-claude-analysis) below.
+
 ---
 ### trivy-sbom-notify
 
@@ -456,6 +474,155 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
 ```
+
+---
+### trivy-claude-analysis
+
+Post-processing action that reads a Trivy JSON report and asks Claude to create **private draft** GitHub repository security advisories — one per finding, at the severities you choose. The Trivy-specific prompt (CVE handling, ecosystem mapping, deduplication) is versioned inside this action, so caller repositories never duplicate it.
+
+> [!IMPORTANT]
+> The calling workflow must grant `permissions: repository-advisories: write` for advisory creation to succeed.
+
+This action is typically chained after [`trivy-scan-notify`](#trivy-scan-notify), which produces the JSON report and uploads it as a workflow artifact.
+
+#### Inputs
+
+| name              | required | type   | default               | description |
+| ----------------- | -------- | ------ | --------------------- | ----------- |
+| JSON_FILE         |   yes    | string |                       | Path to the Trivy JSON report (e.g. `trivy-image.json`). Use `steps.<id>.outputs.json_file` from `trivy-scan-notify` in the same job. |
+| SCAN_TYPE         |   yes    | string |                       | `image`, `fs`, or `config` |
+| TARGET            |   yes    | string |                       | What was scanned (image reference or scan path) |
+| SARIF_CATEGORY    |   no     | string | `"trivy-<SCAN_TYPE>"` | SARIF category from the originating scan, used to link advisories to the Code Scanning report |
+| SEVERITIES        |   no     | string | `"CRITICAL,HIGH"`     | Comma-separated severities. Append `,MEDIUM` to include medium findings. |
+| ANTHROPIC_API_KEY |   yes    | string |                       | Anthropic API key. Pass `secrets.ANTHROPIC_API_KEY`. |
+| GITHUB_TOKEN      |   yes    | string |                       | GitHub token with `repository-advisories: write`. Pass `secrets.GITHUB_TOKEN`. |
+| MODEL             |   no     | string | `"claude-sonnet-4-6"` | Claude model ID override |
+
+#### Example — single-job (scan and analyze immediately)
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+  repository-advisories: write
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: imio/gha/trivy-scan-notify@v7
+        id: trivy
+        with:
+          SCAN_TYPE: image
+          IMAGE_REF: registry.example.org/myapp:${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+
+      - uses: imio/gha/trivy-claude-analysis@v7
+        if: steps.trivy.outputs.critical > 0 || steps.trivy.outputs.high > 0
+        with:
+          JSON_FILE: ${{ steps.trivy.outputs.json_file }}
+          SCAN_TYPE: image
+          TARGET: registry.example.org/myapp:${{ github.sha }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+The JSON file is already on disk from `trivy-scan-notify`, so no re-scan is needed.
+
+#### Example — two-job pattern with manual approval
+
+This pattern gates the Claude analysis (and the Anthropic token cost) behind a human approval step. Job 1 runs the scan and posts finding counts to Mattermost. A reviewer approves job 2 only when Claude analysis is worth running. Job 2 operates on the **exact JSON** produced by job 1 (downloaded from the workflow artifact), so there is no re-scan and no risk of state drift.
+
+> [!NOTE]
+> Create a `security-review` environment in repo Settings → Environments and add required reviewers before using this pattern.
+
+```yaml
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    outputs:
+      critical: ${{ steps.trivy.outputs.critical }}
+      high: ${{ steps.trivy.outputs.high }}
+      json_file: ${{ steps.trivy.outputs.json_file }}
+      artifact_name: ${{ steps.trivy.outputs.artifact_name }}
+    steps:
+      - uses: imio/gha/trivy-scan-notify@v7
+        id: trivy
+        with:
+          SCAN_TYPE: image
+          IMAGE_REF: registry.example.org/myapp:${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+
+  claude-analysis:
+    needs: scan
+    if: needs.scan.outputs.critical > 0 || needs.scan.outputs.high > 0
+    environment: security-review   # pauses for human approval
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      repository-advisories: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.scan.outputs.artifact_name }}
+
+      - uses: imio/gha/trivy-claude-analysis@v7
+        with:
+          JSON_FILE: ${{ needs.scan.outputs.json_file }}
+          SCAN_TYPE: image
+          TARGET: registry.example.org/myapp:${{ github.sha }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+---
+### claude-agent
+
+Run a [Claude Code](https://docs.anthropic.com/claude/claude-code) agent with a given prompt in a CI pipeline. Thin, opinionated wrapper around `anthropics/claude-code-action` with prompt composition, optional file exposure, model selection, and GitHub API access for operations such as creating security advisories.
+
+> [!NOTE]
+> The calling workflow must grant the permissions required for the operations Claude will perform. For security advisory creation, add `repository-advisories: write`.
+
+#### Inputs
+
+| name              | required | type   | default               | description |
+| ----------------- | -------- | ------ | --------------------- | ----------- |
+| PROMPT            |   yes    | string |                       | Instructions for Claude |
+| FILES             |   no     | string |                       | Newline-separated list of file paths to expose to Claude (appended to the prompt as a "Files to examine" section) |
+| ANTHROPIC_API_KEY |   yes    | string |                       | Anthropic API key. Pass `secrets.ANTHROPIC_API_KEY`. |
+| MODEL             |   no     | string | `"claude-sonnet-4-6"` | Claude model ID |
+| GITHUB_TOKEN      |   no     | string |                       | GitHub token forwarded to Claude for GitHub API operations (e.g. creating security advisories). Pass `secrets.GITHUB_TOKEN`. |
+
+Claude's output is displayed in the GitHub Actions Step Summary (`display_report: true`).
+
+#### Example of usage
+
+```yaml
+jobs:
+  security-advisory:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      repository-advisories: write
+    steps:
+      - uses: imio/gha/claude-agent@v7
+        with:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROMPT: |
+            Review the dependency list and create a private draft security advisory
+            for any known critical vulnerability you find.
+          FILES: |
+            package.json
+            requirements.txt
+```
+
+For Trivy scan post-processing, use the dedicated [`trivy-claude-analysis`](#trivy-claude-analysis) action instead of calling `claude-agent` directly — it keeps the Trivy-specific prompt versioned inside the iMio actions.
 
 ## Contribute
 
