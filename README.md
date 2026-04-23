@@ -48,6 +48,9 @@ This repository hosts a set of github actions we use to deploy our apps.
     - [trivy-sbom-notify](#trivy-sbom-notify)
       - [Inputs](#inputs-12)
       - [Example of usage](#example-of-usage-13)
+    - [claude-agent](#claude-agent)
+      - [Inputs](#inputs-13)
+      - [Example of usage](#example-of-usage-14)
   - [Contribute](#contribute)
     - [Release](#release)
 
@@ -354,6 +357,8 @@ External actions are pinned by SHA as required by the iMio security référentie
 
 > [!IMPORTANT]
 > The calling workflow must grant `permissions: security-events: write` for the SARIF upload to Code Scanning to succeed. On **private** repositories, GitHub Advanced Security must be enabled.
+>
+> When `CLAUDE_ANALYSIS=true`, the workflow also needs `repository-advisories: write` to create private draft security advisories.
 
 #### Inputs
 
@@ -371,8 +376,11 @@ External actions are pinned by SHA as required by the iMio security référentie
 | SARIF_CATEGORY         |   no     | string  | `"trivy-<SCAN_TYPE>"`     | Code Scanning category for split results |
 | TRIVY_USERNAME         |   no     | string  |                           | Username for a private image registry |
 | TRIVY_PASSWORD         |   no     | string  |                           | Password for a private image registry |
-| GITHUB_TOKEN           |   no     | string  |                           | Pass `secrets.GITHUB_TOKEN` to avoid Trivy DB rate-limits |
+| GITHUB_TOKEN           |   no     | string  |                           | Pass `secrets.GITHUB_TOKEN` to avoid Trivy DB rate-limits and to allow Claude to create security advisories |
 | MATTERMOST_WEBHOOK_URL |   no     | string  |                           | Webhook URL to send notifications on Mattermost |
+| CLAUDE_ANALYSIS        |   no     | string  | `"false"`                 | Set to `"true"` to invoke Claude to analyze findings and create private draft security advisories (requires `ANTHROPIC_API_KEY`) |
+| ANTHROPIC_API_KEY      |   no     | string  |                           | Anthropic API key, required when `CLAUDE_ANALYSIS=true`. Pass `secrets.ANTHROPIC_API_KEY`. |
+| CLAUDE_SEVERITIES      |   no     | string  | `"CRITICAL,HIGH"`         | Comma-separated severities Claude should create advisories for. Append `,MEDIUM` to include medium findings. |
 
 #### Example of usage
 
@@ -455,6 +463,68 @@ jobs:
           IMAGE_REF: registry.example.org/${{ github.repository }}:${{ github.sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+```
+
+---
+### claude-agent
+
+Run a [Claude Code](https://docs.anthropic.com/claude/claude-code) agent with a given prompt in a CI pipeline. Thin, opinionated wrapper around `anthropics/claude-code-action` with prompt composition, optional file exposure, model selection, and GitHub API access for operations such as creating security advisories.
+
+> [!NOTE]
+> The calling workflow must grant the permissions required for the operations Claude will perform. For security advisory creation, add `repository-advisories: write`.
+
+#### Inputs
+
+| name              | required | type   | default               | description |
+| ----------------- | -------- | ------ | --------------------- | ----------- |
+| prompt            |   yes    | string |                       | Instructions for Claude |
+| files             |   no     | string |                       | Newline-separated list of file paths to expose to Claude (appended to the prompt as a "Files to examine" section) |
+| ANTHROPIC_API_KEY |   yes    | string |                       | Anthropic API key. Pass `secrets.ANTHROPIC_API_KEY`. |
+| model             |   no     | string | `"claude-sonnet-4-6"` | Claude model ID |
+| GITHUB_TOKEN      |   no     | string |                       | GitHub token forwarded to Claude for GitHub API operations (e.g. creating security advisories). Pass `secrets.GITHUB_TOKEN`. |
+
+Claude's output is displayed in the GitHub Actions Step Summary (`display_report: true`).
+
+#### Example of usage
+
+```yaml
+jobs:
+  security-advisory:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      repository-advisories: write
+    steps:
+      - uses: imio/gha/claude-agent@v7
+        with:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Review the dependency list and create a private draft security advisory
+            for any known critical vulnerability you find.
+          files: |
+            package.json
+            requirements.txt
+```
+
+Combined with `trivy-scan-notify` (opt-in via `CLAUDE_ANALYSIS`):
+
+```yaml
+permissions:
+  contents: read
+  security-events: write
+  repository-advisories: write
+
+steps:
+  - uses: imio/gha/trivy-scan-notify@v7
+    with:
+      SCAN_TYPE: image
+      IMAGE_REF: registry.example.org/myapp:${{ github.sha }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+      CLAUDE_ANALYSIS: 'true'
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLAUDE_SEVERITIES: 'CRITICAL,HIGH,MEDIUM'
 ```
 
 ## Contribute
