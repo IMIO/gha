@@ -68,6 +68,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
         MODEL: ${{ inputs.MODEL }}
         FILES: ${{ inputs.JSON_FILE }}
+        SKIP_PERMISSIONS: 'true'
         PROMPT: |
           You are analyzing a Trivy security scan report and creating private draft GitHub repository security advisories — one advisory per finding. Do not publish any advisory.
 

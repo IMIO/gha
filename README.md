@@ -627,6 +627,8 @@ Run a [Claude Code](https://docs.anthropic.com/claude/claude-code) agent with a 
 | ANTHROPIC_API_KEY |   yes    | string |                       | Anthropic API key. Pass `secrets.ANTHROPIC_API_KEY`. |
 | MODEL             |   no     | string | `"claude-sonnet-4-6"` | Claude model ID |
 | GITHUB_TOKEN      |   no     | string |                       | GitHub token forwarded to Claude for GitHub API operations (e.g. creating security advisories). Pass `secrets.GITHUB_TOKEN`. |
+| ALLOWED_TOOLS     |   no     | string |                       | Comma-separated allowlist passed to Claude Code `--allowedTools` to pre-approve tools in headless CI (no interactive prompts). Example: `Bash(gh api:*),Read,Write`. Leave empty to keep default Claude Code permissions, which will pause waiting for approval on write-mode Bash in CI. |
+| SKIP_PERMISSIONS  |   no     | string | `"false"`             | Set to `"true"` to pass `--dangerously-skip-permissions`, auto-approving every tool call. Simpler than `ALLOWED_TOOLS` but removes all safeguards — use only in tightly-scoped CI actions with minimally-scoped credentials. Takes precedence over `ALLOWED_TOOLS` when both are set. |
 
 Claude's output is displayed in the GitHub Actions Step Summary (`display_report: true`).
 

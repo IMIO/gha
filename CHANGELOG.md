@@ -1,5 +1,20 @@
 # Changelog
 
+## [v7.2.1] - 2026-04-23
+### Fixed
+- trivy-claude-analysis
+  - Advisory creation now works end-to-end. `secrets.GITHUB_TOKEN` cannot be granted `repository-advisories` scope (not a valid `GITHUB_TOKEN` permission key) and returns 403 on `POST /repos/{owner}/{repo}/security-advisories` — callers must pass an installation token minted from a GitHub App instead
+  - Now passes `SKIP_PERMISSIONS: 'true'` to `claude-agent` so the action no longer pauses in CI waiting for interactive approval when Claude runs `gh api --method POST`
+### Added
+- claude-agent
+  - New `ALLOWED_TOOLS` input — value passed to Claude Code `--allowedTools` to pre-approve specific tools in headless CI (e.g. `Bash(gh api:*),Read`)
+  - New `SKIP_PERMISSIONS` input (default `"false"`) — set to `"true"` to pass `--dangerously-skip-permissions` and auto-approve every tool call; takes precedence over `ALLOWED_TOOLS`
+### Changed
+- README
+  - Two-job pattern example now uses `actions/create-github-app-token@v2` to mint an installation token from a GitHub App and drops the invalid `repository-advisories: write` permission key
+  - New **Prerequisites** subsection documents the required GitHub App (`imio-advisory-app`), repo/org secrets (`ADVISORY_APP_ID`, `ADVISORY_APP_SECRET`, `ANTHROPIC_API_KEY`), the `security-review` environment (required reviewers, branch policy), and the need to enable Private vulnerability reporting on each consuming repo
+  - `trivy-claude-analysis` `GITHUB_TOKEN` input description updated to warn against passing `secrets.GITHUB_TOKEN`
+
 ## [v7.2.0] - 2026-04-23
 ### Added
 - claude-agent

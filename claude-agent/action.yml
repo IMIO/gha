@@ -20,6 +20,14 @@ inputs:
     description: 'GitHub token forwarded to Claude for GitHub API operations (e.g. creating security advisories). Requires the appropriate permissions in the calling workflow (e.g. repository-advisories: write).'
     required: false
     default: ''
+  ALLOWED_TOOLS:
+    description: 'Value passed to Claude Code --allowedTools to pre-approve tools in headless CI (no interactive prompts). Comma-separated list, e.g. `Bash(gh api:*),Read,Write`. Leave empty to keep default Claude Code permissions (which will pause waiting for approval on write-mode Bash in CI).'
+    required: false
+    default: ''
+  SKIP_PERMISSIONS:
+    description: 'Set to "true" to pass --dangerously-skip-permissions, auto-approving every tool call. Simpler than ALLOWED_TOOLS but removes all safeguards — use only in tightly-scoped CI actions with minimally-scoped credentials.'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
@@ -43,11 +51,27 @@ runs:
           echo "$DELIMITER"
         } >> "$GITHUB_OUTPUT"
 
+    - name: Compose claude_args
+      id: args
+      shell: bash
+      env:
+        MODEL: ${{ inputs.MODEL }}
+        ALLOWED_TOOLS: ${{ inputs.ALLOWED_TOOLS }}
+        SKIP_PERMISSIONS: ${{ inputs.SKIP_PERMISSIONS }}
+      run: |
+        ARGS="--model $MODEL"
+        if [ "$SKIP_PERMISSIONS" = "true" ]; then
+          ARGS="$ARGS --dangerously-skip-permissions"
+        elif [ -n "$ALLOWED_TOOLS" ]; then
+          ARGS="$ARGS --allowedTools $ALLOWED_TOOLS"
+        fi
+        echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+
     - name: Run Claude agent
       uses: anthropics/claude-code-action@b4d67413279fc18c6e5de930ae307c4f108714eb  # v1
       with:
         prompt: ${{ steps.compose.outputs.prompt }}
         anthropic_api_key: ${{ inputs.ANTHROPIC_API_KEY }}
         github_token: ${{ inputs.GITHUB_TOKEN }}
-        claude_args: '--model ${{ inputs.MODEL }}'
+        claude_args: ${{ steps.args.outputs.args }}
         display_report: 'true'
