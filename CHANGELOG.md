@@ -1,5 +1,18 @@
 # Changelog
 
+## [v7.2.0] - 2026-04-23
+### Added
+- claude-agent
+  - New composite action wrapping `anthropics/claude-code-action` (SHA-pinned) for running a Claude Code agent in CI pipelines
+  - Accepts a `prompt`, an optional newline-separated list of `files` to expose, a `model` override (default `claude-sonnet-4-6`), and an optional `GITHUB_TOKEN` for GitHub API operations (e.g. creating security advisories)
+  - Claude output is displayed in the GitHub Actions Step Summary
+### Changed
+- trivy-scan-notify
+  - New opt-in `CLAUDE_ANALYSIS` input: when `"true"`, invokes `claude-agent` after the scan to create private draft GitHub security advisories — one per finding
+  - `CLAUDE_SEVERITIES` input (default `CRITICAL,HIGH`) controls which severity levels are processed; append `,MEDIUM` to include medium findings
+  - Advisories are deduplicated against existing drafts and processed in CRITICAL → HIGH → MEDIUM order
+  - Requires `repository-advisories: write` permission in the calling workflow when `CLAUDE_ANALYSIS=true`
+
 ## [v7.1.0] - 2026-04-21
 ### Added
 - trivy-scan-notify
