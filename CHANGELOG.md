@@ -1,5 +1,16 @@
 # Changelog
 
+## [v8.0.0] - 2026-04-29
+### Changed
+- trivy-scan-notify
+  - **Breaking:** `SEVERITY` input renamed to `SEVERITIES` — update callers accordingly
+  - **Breaking:** `EXIT_CODE` input removed — replace with `FAIL_ON_SEVERITIES`
+  - New `FAIL_ON_SEVERITIES` input (default `""`) — comma-separated severities that trigger job failure; replaces `EXIT_CODE`. Leave empty to enable report-only mode (scan and notify without blocking the pipeline)
+  - Both scans (SARIF and JSON) now use `SEVERITIES` to filter findings; severity counts in the notification and outputs reflect only the selected levels
+  - New `low` output — number of LOW findings when `LOW` is included in `SEVERITIES`
+  - Notification body now labels findings with the active `SEVERITIES` value and includes the LOW count
+  - Notification STATUS reflects both infrastructure scan failures and `FAIL_ON_SEVERITIES` threshold breaches
+
 ## [v7.2.1] - 2026-04-23
 ### Fixed
 - trivy-claude-analysis
