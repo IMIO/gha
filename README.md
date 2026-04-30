@@ -368,8 +368,8 @@ External actions are pinned by SHA as required by the iMio security référentie
 | SCAN_TYPE              |   yes    | string  |                           | One of `image`, `fs`, `config` |
 | IMAGE_REF              |   cond.  | string  |                           | Image reference to scan (required when `SCAN_TYPE=image`) |
 | SCAN_REF               |   no     | string  | `"."`                     | Filesystem path (used when `SCAN_TYPE` is `fs` or `config`) |
-| SEVERITIES             |   no     | string  | `"HIGH,CRITICAL"`         | Comma-separated severity levels to include in all outputs (SARIF, notification, counts) |
-| FAIL_ON_SEVERITIES     |   no     | string  | `""`                      | Comma-separated severity levels that trigger job failure. Leave empty to enable **report-only mode** (never fail on findings). |
+| SEVERITIES             |   no     | string  | `"CRITICAL,HIGH,MEDIUM,LOW"` | Comma-separated severity levels to include in all outputs (SARIF, notification, counts) |
+| FAIL_ON_SEVERITIES     |   no     | string  | `"CRITICAL,HIGH"`         | Comma-separated severity levels that trigger job failure. Set to `""` to enable **report-only mode** (never fail on findings). |
 | SCANNERS               |   no     | string  | *(per-type default)*      | Trivy scanners. If empty: `image`→`vuln,secret,misconfig`, `fs`→`vuln,secret`, `config`→`secret,misconfig` |
 | IGNORE_UNFIXED         |   no     | string  | `"true"`                  | Ignore vulnerabilities without a known fix |
 | TRIVYIGNORES           |   no     | string  | `".trivyignore"`          | Path to a `.trivyignore` file |
@@ -380,7 +380,7 @@ External actions are pinned by SHA as required by the iMio security référentie
 | GITHUB_TOKEN           |   no     | string  |                           | Pass `secrets.GITHUB_TOKEN` to avoid Trivy DB rate-limits |
 | MATTERMOST_WEBHOOK_URL |   no     | string  |                           | Webhook URL to send notifications on Mattermost |
 
-`SEVERITIES` and `FAIL_ON_SEVERITIES` are independent: you can report on `MEDIUM,HIGH,CRITICAL` while only failing on `HIGH,CRITICAL`, or set `FAIL_ON_SEVERITIES` to empty to scan and notify without ever blocking the pipeline.
+`SEVERITIES` and `FAIL_ON_SEVERITIES` are independent: you can report on `MEDIUM,HIGH,CRITICAL` while only failing on `HIGH,CRITICAL`, or set `FAIL_ON_SEVERITIES` to empty to scan and notify without ever blocking the pipeline. `FAIL_ON_SEVERITIES` must be a subset of `SEVERITIES` — the action fails fast otherwise, since Trivy filters its output by `SEVERITIES` and any extra level would be silently dropped before the fail check.
 
 #### Outputs
 
@@ -442,7 +442,7 @@ jobs:
           SCAN_TYPE: image
           IMAGE_REF: ${{ github.repository }}:${{ github.sha }}
           SEVERITIES: HIGH,CRITICAL
-          # FAIL_ON_SEVERITIES not set → report-only mode, pipeline never blocked
+          FAIL_ON_SEVERITIES: ''   # report-only mode, pipeline never blocked
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
 ```
