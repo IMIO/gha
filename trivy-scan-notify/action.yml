@@ -69,6 +69,9 @@ outputs:
   low:
     description: 'Number of LOW findings'
     value: ${{ steps.counts.outputs.low }}
+  unknown:
+    description: 'Number of UNKNOWN findings'
+    value: ${{ steps.counts.outputs.unknown }}
   json_file:
     description: 'Filename of the Trivy JSON report (relative to the workspace), for use with trivy-claude-analysis in the same job'
     value: ${{ steps.defaults.outputs.json_file }}
@@ -109,16 +112,40 @@ runs:
           echo "::error::IMAGE_REF is required when SCAN_TYPE=image"
           exit 2
         fi
+        # Whitelist of Trivy severity levels (mirrors the GitLab sister component).
+        # Tokens are normalized (trim + uppercase) before comparison, so
+        # "HIGH, CRITICAL" and "high" are accepted.
+        VALID_SEVS=" UNKNOWN LOW MEDIUM HIGH CRITICAL "
+        if [ -z "$SEVERITIES_IN" ]; then
+          echo "::error::SEVERITIES must not be empty (allowed: UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL)"
+          exit 2
+        fi
+        SEV_LIST=$(echo "$SEVERITIES_IN" | tr ',' '\n' | sed 's/[[:space:]]//g' | tr '[:lower:]' '[:upper:]')
+        for sev in $SEV_LIST; do
+          case "$VALID_SEVS" in
+            *" $sev "*) ;;
+            *)
+              echo "::error::SEVERITIES contains invalid value '$sev' (allowed: UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL)"
+              exit 2
+              ;;
+          esac
+        done
         # Trivy filters scan output by SEVERITIES, so any severity in
         # FAIL_ON_SEVERITIES that is not in SEVERITIES would be silently
         # ignored by the fail-check step. Reject contradictory configs early.
         if [ -n "$FAIL_ON_SEVERITIES_IN" ]; then
-          SEV_LIST=$(echo "$SEVERITIES_IN" | tr ',' '\n' | sed 's/[[:space:]]//g')
-          for sev in $(echo "$FAIL_ON_SEVERITIES_IN" | tr ',' ' '); do
-            sev_trim=$(echo "$sev" | tr -d '[:space:]')
-            [ -z "$sev_trim" ] && continue
-            if ! echo "$SEV_LIST" | grep -qxF "$sev_trim"; then
-              echo "::error::FAIL_ON_SEVERITIES contains '$sev_trim' which is not in SEVERITIES='$SEVERITIES_IN'. FAIL_ON_SEVERITIES must be a subset of SEVERITIES, otherwise findings at that severity are filtered out at scan time and silently ignored by the fail check."
+          for sev_raw in $(echo "$FAIL_ON_SEVERITIES_IN" | tr ',' ' '); do
+            sev=$(echo "$sev_raw" | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')
+            [ -z "$sev" ] && continue
+            case "$VALID_SEVS" in
+              *" $sev "*) ;;
+              *)
+                echo "::error::FAIL_ON_SEVERITIES contains invalid value '$sev' (allowed: UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL)"
+                exit 2
+                ;;
+            esac
+            if ! echo "$SEV_LIST" | grep -qxF "$sev"; then
+              echo "::error::FAIL_ON_SEVERITIES contains '$sev' which is not in SEVERITIES='$SEVERITIES_IN'. FAIL_ON_SEVERITIES must be a subset of SEVERITIES, otherwise findings at that severity are filtered out at scan time and silently ignored by the fail check."
               exit 2
             fi
           done
@@ -187,27 +214,32 @@ runs:
         if ! command -v jq > /dev/null 2>&1; then
           sudo apt-get update -q && sudo apt-get install -y -q jq
         fi
-        CRITICAL=0; HIGH=0; MEDIUM=0; LOW=0
+        UNKNOWN=0; LOW=0; MEDIUM=0; HIGH=0; CRITICAL=0
+        COUNTS_STR=""
         if [ -f "$JSON_FILE" ]; then
           # Normalize SEVERITIES once: split, strip whitespace, uppercase.
-          # Trivy's JSON .Severity is always uppercase, so $sev is passed
-          # to jq as-is (callers below use uppercase tokens).
+          # Trivy's JSON .Severity is always uppercase, so $SEV is passed to jq as-is.
           SEV_NORM=$(echo "$SEVERITIES" | tr ',' '\n' | sed 's/[[:space:]]//g' | tr '[:lower:]' '[:upper:]')
-          count_sev() {
-            local sev="$1"
-            echo "$SEV_NORM" | grep -qxF "$sev" || { echo 0; return; }
-            jq --arg s "$sev" '[.. | objects | select(has("Severity")) | select(.Severity==$s)] | length' "$JSON_FILE" 2>/dev/null || echo 0
-          }
-          CRITICAL=$(count_sev CRITICAL)
-          HIGH=$(count_sev HIGH)
-          MEDIUM=$(count_sev MEDIUM)
-          LOW=$(count_sev LOW)
+          for SEV in $SEV_NORM; do
+            [ -z "$SEV" ] && continue
+            C=$(jq --arg s "$SEV" '[.. | objects | select(has("Severity")) | select(.Severity==$s)] | length' "$JSON_FILE" 2>/dev/null || echo 0)
+            case "$SEV" in
+              UNKNOWN)  UNKNOWN=$C ;;
+              LOW)      LOW=$C ;;
+              MEDIUM)   MEDIUM=$C ;;
+              HIGH)     HIGH=$C ;;
+              CRITICAL) CRITICAL=$C ;;
+            esac
+            COUNTS_STR="${COUNTS_STR}${SEV}=${C} "
+          done
         fi
+        echo "unknown=$UNKNOWN"   >> "$GITHUB_OUTPUT"
+        echo "low=$LOW"           >> "$GITHUB_OUTPUT"
+        echo "medium=$MEDIUM"     >> "$GITHUB_OUTPUT"
+        echo "high=$HIGH"         >> "$GITHUB_OUTPUT"
         echo "critical=$CRITICAL" >> "$GITHUB_OUTPUT"
-        echo "high=$HIGH" >> "$GITHUB_OUTPUT"
-        echo "medium=$MEDIUM" >> "$GITHUB_OUTPUT"
-        echo "low=$LOW" >> "$GITHUB_OUTPUT"
-        echo "Findings (within SEVERITIES=$SEVERITIES): CRITICAL=$CRITICAL HIGH=$HIGH MEDIUM=$MEDIUM LOW=$LOW"
+        echo "counts_str=${COUNTS_STR}" >> "$GITHUB_OUTPUT"
+        echo "Findings (within SEVERITIES=$SEVERITIES): ${COUNTS_STR:-none}"
 
     - name: Upload SARIF to Code Scanning
       if: always() && inputs.UPLOAD_SARIF == 'true' && hashFiles(steps.defaults.outputs.sarif_file) != ''
@@ -271,7 +303,7 @@ runs:
           **Branch:** ${{ github.ref_name }}
           **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
           **Target:** ${{ inputs.SCAN_TYPE == 'image' && inputs.IMAGE_REF || inputs.SCAN_REF }}
-          **Findings (${{ inputs.SEVERITIES }}):** CRITICAL=${{ steps.counts.outputs.critical }} HIGH=${{ steps.counts.outputs.high }} MEDIUM=${{ steps.counts.outputs.medium }} LOW=${{ steps.counts.outputs.low }}
+          **Findings (${{ inputs.SEVERITIES }}):** ${{ steps.counts.outputs.counts_str || 'none' }}
 
     - name: Re-raise scan or findings failure
       if: always() && (steps.scan.outcome == 'failure' || steps.fail_check.outcome == 'failure')

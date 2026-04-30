@@ -12,6 +12,9 @@
   - Notification body now labels findings with the active `SEVERITIES` value and includes the LOW count
   - Notification STATUS reflects both infrastructure scan failures and `FAIL_ON_SEVERITIES` threshold breaches
   - Action now validates that `FAIL_ON_SEVERITIES` is a subset of `SEVERITIES` and fails fast (exit 2) on contradictory configs — without this guard, a severity present in `FAIL_ON_SEVERITIES` but missing from `SEVERITIES` would be filtered out at scan time and silently ignored by the fail check
+  - Action now validates that every severity in `SEVERITIES` and `FAIL_ON_SEVERITIES` is one of `UNKNOWN`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL` and rejects empty `SEVERITIES` — typos no longer silently produce a green 0-finding job
+  - `UNKNOWN` is now a first-class severity: included in the whitelist, exposed via the new `unknown` output, counted in the notification, and accepted in `FAIL_ON_SEVERITIES`
+  - Severity counts and notification body are now dynamic — only the severities listed in `SEVERITIES` appear in the Mattermost `Findings:` line (e.g. `SEVERITIES=CRITICAL,HIGH` → `Findings: CRITICAL=2 HIGH=0`), matching the sister GitLab CI component (`devops/pipelines/security`)
 
 ## [v7.2.1] - 2026-04-23
 ### Fixed
