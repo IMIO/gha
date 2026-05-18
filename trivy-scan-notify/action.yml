@@ -12,18 +12,18 @@ inputs:
     description: 'Filesystem path to scan (used when SCAN_TYPE=fs or config)'
     required: false
     default: '.'
-  SEVERITY:
-    description: 'Comma-separated severity levels to report'
+  SEVERITIES:
+    description: 'Comma-separated severity levels to include in all outputs (SARIF, notification, counts)'
     required: false
-    default: 'HIGH,CRITICAL'
+    default: 'CRITICAL,HIGH,MEDIUM,LOW'
+  FAIL_ON_SEVERITIES:
+    description: 'Comma-separated severity levels that trigger job failure. Leave empty to enable report-only mode.'
+    required: false
+    default: 'CRITICAL,HIGH'
   SCANNERS:
     description: 'Comma-separated list of Trivy scanners. If empty, a sensible default is picked per SCAN_TYPE (image=vuln,secret,misconfig ; fs=vuln,secret ; config=secret,misconfig)'
     required: false
     default: ''
-  EXIT_CODE:
-    description: 'Exit code to use when findings match SEVERITY (set to 0 during bootstrap to only report)'
-    required: false
-    default: '1'
   IGNORE_UNFIXED:
     description: 'Ignore vulnerabilities without a known fix'
     required: false
@@ -66,6 +66,12 @@ outputs:
   medium:
     description: 'Number of MEDIUM findings'
     value: ${{ steps.counts.outputs.medium }}
+  low:
+    description: 'Number of LOW findings'
+    value: ${{ steps.counts.outputs.low }}
+  unknown:
+    description: 'Number of UNKNOWN findings'
+    value: ${{ steps.counts.outputs.unknown }}
   json_file:
     description: 'Filename of the Trivy JSON report (relative to the workspace), for use with trivy-claude-analysis in the same job'
     value: ${{ steps.defaults.outputs.json_file }}
@@ -85,6 +91,8 @@ runs:
         SCAN_TYPE: ${{ inputs.SCAN_TYPE }}
         SCANNERS_IN: ${{ inputs.SCANNERS }}
         SARIF_CATEGORY_IN: ${{ inputs.SARIF_CATEGORY }}
+        SEVERITIES_IN: ${{ inputs.SEVERITIES }}
+        FAIL_ON_SEVERITIES_IN: ${{ inputs.FAIL_ON_SEVERITIES }}
       shell: bash
       run: |
         if [ -n "$SCANNERS_IN" ]; then
@@ -103,6 +111,44 @@ runs:
         if [ "$SCAN_TYPE" = "image" ] && [ -z "${{ inputs.IMAGE_REF }}" ]; then
           echo "::error::IMAGE_REF is required when SCAN_TYPE=image"
           exit 2
+        fi
+        # Whitelist of Trivy severity levels (mirrors the GitLab sister component).
+        # Tokens are normalized (trim + uppercase) before comparison, so
+        # "HIGH, CRITICAL" and "high" are accepted.
+        VALID_SEVS=" UNKNOWN LOW MEDIUM HIGH CRITICAL "
+        if [ -z "$SEVERITIES_IN" ]; then
+          echo "::error::SEVERITIES must not be empty (allowed: UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL)"
+          exit 2
+        fi
+        SEV_LIST=$(echo "$SEVERITIES_IN" | tr ',' '\n' | sed 's/[[:space:]]//g' | tr '[:lower:]' '[:upper:]')
+        for sev in $SEV_LIST; do
+          case "$VALID_SEVS" in
+            *" $sev "*) ;;
+            *)
+              echo "::error::SEVERITIES contains invalid value '$sev' (allowed: UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL)"
+              exit 2
+              ;;
+          esac
+        done
+        # Trivy filters scan output by SEVERITIES, so any severity in
+        # FAIL_ON_SEVERITIES that is not in SEVERITIES would be silently
+        # ignored by the fail-check step. Reject contradictory configs early.
+        if [ -n "$FAIL_ON_SEVERITIES_IN" ]; then
+          for sev_raw in $(echo "$FAIL_ON_SEVERITIES_IN" | tr ',' ' '); do
+            sev=$(echo "$sev_raw" | tr -d '[:space:]' | tr '[:lower:]' '[:upper:]')
+            [ -z "$sev" ] && continue
+            case "$VALID_SEVS" in
+              *" $sev "*) ;;
+              *)
+                echo "::error::FAIL_ON_SEVERITIES contains invalid value '$sev' (allowed: UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL)"
+                exit 2
+                ;;
+            esac
+            if ! echo "$SEV_LIST" | grep -qxF "$sev"; then
+              echo "::error::FAIL_ON_SEVERITIES contains '$sev' which is not in SEVERITIES='$SEVERITIES_IN'. FAIL_ON_SEVERITIES must be a subset of SEVERITIES, otherwise findings at that severity are filtered out at scan time and silently ignored by the fail check."
+              exit 2
+            fi
+          done
         fi
         if [ -n "$SARIF_CATEGORY_IN" ]; then
           SARIF_CATEGORY_EFFECTIVE="$SARIF_CATEGORY_IN"
@@ -124,9 +170,9 @@ runs:
         scan-ref: ${{ inputs.SCAN_TYPE == 'image' && '' || inputs.SCAN_REF }}
         format: sarif
         output: ${{ steps.defaults.outputs.sarif_file }}
-        severity: ${{ inputs.SEVERITY }}
+        severity: ${{ inputs.SEVERITIES }}
         scanners: ${{ steps.defaults.outputs.scanners }}
-        exit-code: ${{ inputs.EXIT_CODE }}
+        exit-code: '0'
         ignore-unfixed: ${{ inputs.IGNORE_UNFIXED }}
         trivyignores: ${{ inputs.TRIVYIGNORES }}
         cache: 'true'
@@ -146,7 +192,7 @@ runs:
         scan-ref: ${{ inputs.SCAN_TYPE == 'image' && '' || inputs.SCAN_REF }}
         format: json
         output: ${{ steps.defaults.outputs.json_file }}
-        severity: 'LOW,MEDIUM,HIGH,CRITICAL'
+        severity: ${{ inputs.SEVERITIES }}
         scanners: ${{ steps.defaults.outputs.scanners }}
         exit-code: '0'
         ignore-unfixed: ${{ inputs.IGNORE_UNFIXED }}
@@ -162,22 +208,38 @@ runs:
       id: counts
       env:
         JSON_FILE: ${{ steps.defaults.outputs.json_file }}
+        SEVERITIES: ${{ inputs.SEVERITIES }}
       shell: bash
       run: |
         if ! command -v jq > /dev/null 2>&1; then
           sudo apt-get update -q && sudo apt-get install -y -q jq
         fi
-        CRITICAL=0; HIGH=0; MEDIUM=0
+        UNKNOWN=0; LOW=0; MEDIUM=0; HIGH=0; CRITICAL=0
+        COUNTS_STR=""
         if [ -f "$JSON_FILE" ]; then
-          # Vulnerabilities + misconfigurations + secrets all carry a Severity field
-          CRITICAL=$(jq '[.. | objects | select(has("Severity")) | select(.Severity=="CRITICAL")] | length' "$JSON_FILE" 2>/dev/null || echo 0)
-          HIGH=$(jq '[.. | objects | select(has("Severity")) | select(.Severity=="HIGH")] | length' "$JSON_FILE" 2>/dev/null || echo 0)
-          MEDIUM=$(jq '[.. | objects | select(has("Severity")) | select(.Severity=="MEDIUM")] | length' "$JSON_FILE" 2>/dev/null || echo 0)
+          # Normalize SEVERITIES once: split, strip whitespace, uppercase.
+          # Trivy's JSON .Severity is always uppercase, so $SEV is passed to jq as-is.
+          SEV_NORM=$(echo "$SEVERITIES" | tr ',' '\n' | sed 's/[[:space:]]//g' | tr '[:lower:]' '[:upper:]')
+          for SEV in $SEV_NORM; do
+            [ -z "$SEV" ] && continue
+            C=$(jq --arg s "$SEV" '[.. | objects | select(has("Severity")) | select(.Severity==$s)] | length' "$JSON_FILE" 2>/dev/null || echo 0)
+            case "$SEV" in
+              UNKNOWN)  UNKNOWN=$C ;;
+              LOW)      LOW=$C ;;
+              MEDIUM)   MEDIUM=$C ;;
+              HIGH)     HIGH=$C ;;
+              CRITICAL) CRITICAL=$C ;;
+            esac
+            COUNTS_STR="${COUNTS_STR}${SEV}=${C} "
+          done
         fi
+        echo "unknown=$UNKNOWN"   >> "$GITHUB_OUTPUT"
+        echo "low=$LOW"           >> "$GITHUB_OUTPUT"
+        echo "medium=$MEDIUM"     >> "$GITHUB_OUTPUT"
+        echo "high=$HIGH"         >> "$GITHUB_OUTPUT"
         echo "critical=$CRITICAL" >> "$GITHUB_OUTPUT"
-        echo "high=$HIGH" >> "$GITHUB_OUTPUT"
-        echo "medium=$MEDIUM" >> "$GITHUB_OUTPUT"
-        echo "Findings: CRITICAL=$CRITICAL HIGH=$HIGH MEDIUM=$MEDIUM"
+        echo "counts_str=${COUNTS_STR}" >> "$GITHUB_OUTPUT"
+        echo "Findings (within SEVERITIES=$SEVERITIES): ${COUNTS_STR:-none}"
 
     - name: Upload SARIF to Code Scanning
       if: always() && inputs.UPLOAD_SARIF == 'true' && hashFiles(steps.defaults.outputs.sarif_file) != ''
@@ -202,23 +264,48 @@ runs:
         path: ${{ steps.defaults.outputs.json_file }}
         retention-days: 14
 
+    - name: Fail on severity findings
+      if: always()
+      id: fail_check
+      continue-on-error: true
+      env:
+        JSON_FILE: ${{ steps.defaults.outputs.json_file }}
+        FAIL_ON_SEVERITIES: ${{ inputs.FAIL_ON_SEVERITIES }}
+      shell: bash
+      run: |
+        if [ -z "$FAIL_ON_SEVERITIES" ]; then
+          echo "FAIL_ON_SEVERITIES is empty — report-only mode, not failing."
+          exit 0
+        fi
+        if [ ! -f "$JSON_FILE" ]; then
+          echo "::warning::JSON report not found; cannot evaluate FAIL_ON_SEVERITIES."
+          exit 0
+        fi
+        SEVS_JSON=$(echo "$FAIL_ON_SEVERITIES" | tr ',' '\n' | sed 's/[[:space:]]//g' | tr '[:lower:]' '[:upper:]' | grep -v '^$' | jq -R . | jq -s .)
+        FAIL_COUNT=$(jq --argjson sevs "$SEVS_JSON" \
+          '[.. | objects | select(has("Severity")) | select(.Severity as $s | $sevs | index($s) != null)] | length' \
+          "$JSON_FILE" 2>/dev/null || echo 0)
+        if [ "$FAIL_COUNT" -gt 0 ]; then
+          echo "::error::Trivy found $FAIL_COUNT finding(s) matching FAIL_ON_SEVERITIES=$FAIL_ON_SEVERITIES (see Code Scanning tab)."
+          exit 1
+        fi
+        echo "No findings at severity level(s): $FAIL_ON_SEVERITIES"
+
     - name: Notify on Mattermost
       if: always()
       uses: imio/gha/mattermost-notify@v7
       with:
         MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
-        STATUS: ${{ steps.scan.outcome == 'success' && 'success' || 'failure' }}
+        STATUS: ${{ (steps.scan.outcome == 'failure' || steps.fail_check.outcome == 'failure') && 'failure' || 'success' }}
         TITLE: "Trivy Scan (${{ inputs.SCAN_TYPE }})"
         BODY: |
           **Repository:** [${{ github.repository }}](${{ github.server_url }}/${{ github.repository }})
           **Branch:** ${{ github.ref_name }}
           **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
           **Target:** ${{ inputs.SCAN_TYPE == 'image' && inputs.IMAGE_REF || inputs.SCAN_REF }}
-          **Findings:** CRITICAL=${{ steps.counts.outputs.critical }} HIGH=${{ steps.counts.outputs.high }} MEDIUM=${{ steps.counts.outputs.medium }}
+          **Findings (${{ inputs.SEVERITIES }}):** ${{ steps.counts.outputs.counts_str || 'none' }}
 
-    - name: Re-raise scan failure
-      if: steps.scan.outcome == 'failure' && inputs.EXIT_CODE != '0'
+    - name: Re-raise scan or findings failure
+      if: always() && (steps.scan.outcome == 'failure' || steps.fail_check.outcome == 'failure')
       shell: bash
-      run: |
-        echo "::error::Trivy scan reported findings at or above the configured severity (see Code Scanning tab)."
-        exit 1
+      run: exit 1

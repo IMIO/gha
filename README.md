@@ -368,9 +368,9 @@ External actions are pinned by SHA as required by the iMio security référentie
 | SCAN_TYPE              |   yes    | string  |                           | One of `image`, `fs`, `config` |
 | IMAGE_REF              |   cond.  | string  |                           | Image reference to scan (required when `SCAN_TYPE=image`) |
 | SCAN_REF               |   no     | string  | `"."`                     | Filesystem path (used when `SCAN_TYPE` is `fs` or `config`) |
-| SEVERITY               |   no     | string  | `"HIGH,CRITICAL"`         | Comma-separated severity levels to report |
+| SEVERITIES             |   no     | string  | `"CRITICAL,HIGH,MEDIUM,LOW"` | Comma-separated severities reported in all outputs (SARIF, notification, counts). Allowed: `UNKNOWN`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`. Tokens are case-insensitive and whitespace-tolerant. |
+| FAIL_ON_SEVERITIES     |   no     | string  | `"CRITICAL,HIGH"`         | Comma-separated severity levels that trigger job failure. Set to `""` to enable **report-only mode** (never fail on findings). |
 | SCANNERS               |   no     | string  | *(per-type default)*      | Trivy scanners. If empty: `image`→`vuln,secret,misconfig`, `fs`→`vuln,secret`, `config`→`secret,misconfig` |
-| EXIT_CODE              |   no     | string  | `"1"`                     | Exit code when findings match `SEVERITY` (set to `"0"` during bootstrap) |
 | IGNORE_UNFIXED         |   no     | string  | `"true"`                  | Ignore vulnerabilities without a known fix |
 | TRIVYIGNORES           |   no     | string  | `".trivyignore"`          | Path to a `.trivyignore` file |
 | UPLOAD_SARIF           |   no     | string  | `"true"`                  | Upload SARIF to GitHub Code Scanning |
@@ -380,13 +380,17 @@ External actions are pinned by SHA as required by the iMio security référentie
 | GITHUB_TOKEN           |   no     | string  |                           | Pass `secrets.GITHUB_TOKEN` to avoid Trivy DB rate-limits |
 | MATTERMOST_WEBHOOK_URL |   no     | string  |                           | Webhook URL to send notifications on Mattermost |
 
+`SEVERITIES` and `FAIL_ON_SEVERITIES` are independent: you can report on `MEDIUM,HIGH,CRITICAL` while only failing on `HIGH,CRITICAL`, or set `FAIL_ON_SEVERITIES` to empty to scan and notify without ever blocking the pipeline. `FAIL_ON_SEVERITIES` must be a subset of `SEVERITIES` — the action fails fast otherwise, since Trivy filters its output by `SEVERITIES` and any extra level would be silently dropped before the fail check. The Mattermost notification's findings line lists exactly the severities included in `SEVERITIES`, in the order given — `SEVERITIES=CRITICAL,HIGH` produces `CRITICAL=N HIGH=N`, never `MEDIUM=0 LOW=0`.
+
 #### Outputs
 
 | name          | description |
 | ------------- | ----------- |
-| critical      | Number of CRITICAL findings |
-| high          | Number of HIGH findings |
-| medium        | Number of MEDIUM findings |
+| critical      | Number of CRITICAL findings (within `SEVERITIES`) |
+| high          | Number of HIGH findings (within `SEVERITIES`) |
+| medium        | Number of MEDIUM findings (within `SEVERITIES`) |
+| low           | Number of LOW findings (within `SEVERITIES`) |
+| unknown       | Number of UNKNOWN findings (within `SEVERITIES`) |
 | json_file     | Filename of the Trivy JSON report (relative to the workspace) — use as `JSON_FILE` input to `trivy-claude-analysis` in the same job |
 | artifact_name | Name of the uploaded Trivy JSON workflow artifact — use with `actions/download-artifact` in a later job |
 
@@ -408,20 +412,24 @@ jobs:
   trivy-fs:
     runs-on: ubuntu-latest
     steps:
-      - uses: imio/gha/trivy-scan-notify@v7
+      - uses: imio/gha/trivy-scan-notify@v8
         with:
           SCAN_TYPE: fs
           SCAN_REF: .
+          SEVERITIES: HIGH,CRITICAL
+          FAIL_ON_SEVERITIES: HIGH,CRITICAL
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
 
   trivy-iac:
     runs-on: ubuntu-latest
     steps:
-      - uses: imio/gha/trivy-scan-notify@v7
+      - uses: imio/gha/trivy-scan-notify@v8
         with:
           SCAN_TYPE: config
           SCAN_REF: .
+          SEVERITIES: MEDIUM,HIGH,CRITICAL   # report more, but only fail on HIGH+
+          FAIL_ON_SEVERITIES: HIGH,CRITICAL
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
 
@@ -430,10 +438,12 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - run: docker build -t ${{ github.repository }}:${{ github.sha }} .
-      - uses: imio/gha/trivy-scan-notify@v7
+      - uses: imio/gha/trivy-scan-notify@v8
         with:
           SCAN_TYPE: image
           IMAGE_REF: ${{ github.repository }}:${{ github.sha }}
+          SEVERITIES: HIGH,CRITICAL
+          FAIL_ON_SEVERITIES: ''   # report-only mode, pipeline never blocked
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
 ```
