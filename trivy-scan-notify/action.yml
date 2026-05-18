@@ -281,7 +281,7 @@ runs:
           echo "::warning::JSON report not found; cannot evaluate FAIL_ON_SEVERITIES."
           exit 0
         fi
-        SEVS_JSON=$(echo "$FAIL_ON_SEVERITIES" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | jq -R . | jq -s .)
+        SEVS_JSON=$(echo "$FAIL_ON_SEVERITIES" | tr ',' '\n' | sed 's/[[:space:]]//g' | tr '[:lower:]' '[:upper:]' | grep -v '^$' | jq -R . | jq -s .)
         FAIL_COUNT=$(jq --argjson sevs "$SEVS_JSON" \
           '[.. | objects | select(has("Severity")) | select(.Severity as $s | $sevs | index($s) != null)] | length' \
           "$JSON_FILE" 2>/dev/null || echo 0)
