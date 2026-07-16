@@ -75,8 +75,13 @@ runs:
       env:
         HELM_VERSION: ${{ inputs.HELM_VERSION }}
       run: |
+        set -euo pipefail
         DIR=$(mktemp -d)
-        curl -sSL "https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz" | tar -xz -C "$DIR"
+        TARBALL="helm-v${HELM_VERSION}-linux-amd64.tar.gz"
+        curl -fsSL "https://get.helm.sh/${TARBALL}" -o "$DIR/$TARBALL"
+        curl -fsSL "https://get.helm.sh/${TARBALL}.sha256sum" -o "$DIR/${TARBALL}.sha256sum"
+        (cd "$DIR" && sha256sum -c "${TARBALL}.sha256sum")
+        tar -xzf "$DIR/$TARBALL" -C "$DIR"
         echo "$DIR/linux-amd64" >> "$GITHUB_PATH"
     - name: Install signing key
       if: ${{ inputs.SIGNER_KEY != '' }}
@@ -86,6 +91,10 @@ runs:
         SIGNER_KEY_ID: ${{ inputs.SIGNER_KEY_ID }}
         SIGNER_KEY_PASSPHRASE: ${{ inputs.SIGNER_KEY_PASSPHRASE }}
       run: |
+        if [[ -z "$SIGNER_KEY_ID" || -z "$SIGNER_KEY_PASSPHRASE" ]]; then
+          echo "::error::SIGNER_KEY is set but SIGNER_KEY_ID and/or SIGNER_KEY_PASSPHRASE is empty; both are required to sign the chart."
+          exit 1
+        fi
         export GNUPGHOME=$(mktemp -d)
         chmod 700 "$GNUPGHOME"
         echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
@@ -119,6 +128,8 @@ runs:
         CHARTS_URL: https://imio.github.io/helm-charts/
       run: |
         set -euo pipefail
+        TMP=""; WORK=""; PASS=""
+        trap 'rm -rf "$TMP" "$WORK" "$PASS"' EXIT
         # locate charts (mirror helm-gh-pages)
         CHARTS=()
         if [[ "$CHARTS_DIR" == "." ]]; then CHARTS+=("."); else
@@ -144,7 +155,7 @@ runs:
         TMP=$(mktemp -d)
         SIGN_ARGS=()
         if [[ -n "$SIGNER_KEY" ]]; then
-          PASS=$(mktemp); chmod 600 "$PASS"; trap 'rm -f "$PASS"' EXIT
+          PASS=$(mktemp); chmod 600 "$PASS"
           printf '%s' "$SIGNER_KEY_PASSPHRASE" > "$PASS"
           SIGN_ARGS=(--sign --key "$KEY_NAME" --keyring "$SECRING" --passphrase-file "$PASS")
         fi
@@ -163,8 +174,9 @@ runs:
           mv -f "$TMP"/*.tgz "$TARGET_DIR"/
           mv -f "$TMP"/index.yaml "$INDEX_DIR/index.yaml"
         else
+          helm repo index "$TMP" --url "$CHARTS_URL"
           mv -f "$TMP"/*.tgz "$TARGET_DIR"/
-          helm repo index "$INDEX_DIR" --url "$CHARTS_URL"
+          mv -f "$TMP"/index.yaml "$INDEX_DIR/index.yaml"
         fi
         if ls "$TMP"/*.tgz.prov >/dev/null 2>&1; then mv -f "$TMP"/*.tgz.prov "$TARGET_DIR"/; fi
         git add "$TARGET_DIR" "$INDEX_DIR/index.yaml"
