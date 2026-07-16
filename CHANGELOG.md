@@ -1,5 +1,17 @@
 # Changelog
 
+## [v8.1.0] - 2026-07-15
+### Added
+- helm-release-notify
+  - Optional GPG provenance signing (see https://helm.sh/docs/topics/provenance/). When `SIGNER_KEY` is provided, the chart is packaged with `helm package --sign` and the resulting `<chart>-<version>.tgz.prov` is published to `gh-pages` next to the `.tgz`, so consumers can run `helm install/pull --verify`
+  - New `SIGNER_KEY` input — GPG private key (base64 encoded) used to sign the chart. If empty, the chart is published unsigned (unchanged behavior)
+  - New `SIGNER_KEY_ID` input — GPG key fingerprint/ID used to export the legacy signing keyring; required when `SIGNER_KEY` is set
+  - New `SIGNER_KEY_PASSPHRASE` input — passphrase for the GPG signing key; required when `SIGNER_KEY` is set
+  - Mattermost notification body now includes a `Signed:` line
+### Changed
+- helm-release-notify
+  - Replaced the third-party `tylerauerbeck/helm-gh-pages` Docker action with an inline publish step (Helm installed from `get.helm.sh`; chart located, dependencies resolved, linted, packaged, and pushed to `gh-pages` in-action). The published `index.yaml` URL scheme and `test`/`stable` `TARGET_DIR` layout are preserved, so existing unsigned callers are unaffected
+
 ## [v8.0.0] - 2026-04-29
 ### Changed
 - trivy-scan-notify

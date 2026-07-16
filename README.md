@@ -145,7 +145,7 @@ Build a deb package, push it on a repository and optionally notify via a matterm
 ---
 ### helm-release-notify
 
-Release a helm chart and optionally notify via a mattermost webhook
+Release a helm chart (optionally GPG-signed with a provenance `.prov` file) and optionally notify via a mattermost webhook
 
 #### Inputs
 
@@ -159,6 +159,9 @@ Release a helm chart and optionally notify via a mattermost webhook
 | APP_ID                 |    yes   | string |                 | Github App ID |
 | PRIVATE_KEY            |    yes   | string |                 | Github App private key |
 | MATTERMOST_WEBHOOK_URL |    no    | string |                 | Webhook URL to send notifications on Mattermost |
+| SIGNER_KEY             |    no    | string |                 | GPG private key (base64 encoded) used to sign the chart provenance (.prov). If empty, the chart is published unsigned |
+| SIGNER_KEY_ID          |    no    | string |                 | GPG key fingerprint/ID used to export the signing keyring. Required when SIGNER_KEY is set |
+| SIGNER_KEY_PASSPHRASE  |    no    | string |                 | Passphrase for the GPG signing key. Required when SIGNER_KEY is set |
 
 #### Example of usage
 

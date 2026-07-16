@@ -29,15 +29,27 @@ inputs:
   MATTERMOST_WEBHOOK_URL:
     description: 'Webhook URL to send notifications on Mattermost'
     required: false
+  SIGNER_KEY:
+    description: 'GPG private key (base64 encoded) used to sign the chart provenance (.prov). If empty, the chart is published unsigned.'
+    required: false
+    default: ''
+  SIGNER_KEY_ID:
+    description: 'GPG key fingerprint/ID used to export the signing keyring. Required when SIGNER_KEY is set.'
+    required: false
+    default: ''
+  SIGNER_KEY_PASSPHRASE:
+    description: 'Passphrase for the GPG signing key. Required when SIGNER_KEY is set.'
+    required: false
+    default: ''
 runs:
   using: 'composite'
   steps:
     - name: Install packages
       run: |
-        if which curl > /dev/null && which git > /dev/null && which jq > /dev/null; then
+        if which curl > /dev/null && which git > /dev/null && which jq > /dev/null && which gpg > /dev/null; then
           echo "Packages are already installed"
         else
-          sudo apt-get update && sudo apt-get install -y curl git jq
+          sudo apt-get update && sudo apt-get install -y curl git jq gnupg
         fi
       shell: bash
     - name: Checkout
@@ -58,20 +70,122 @@ runs:
       run: |
         echo VERSION=$(cat "$CHARTS_DIR/Chart.yaml" | grep -oPm 1 '(?<=version: ).*') >> $GITHUB_ENV
       shell: bash
+    - name: Set up Helm
+      shell: bash
+      env:
+        HELM_VERSION: ${{ inputs.HELM_VERSION }}
+      run: |
+        set -euo pipefail
+        DIR=$(mktemp -d)
+        TARBALL="helm-v${HELM_VERSION}-linux-amd64.tar.gz"
+        curl -fsSL "https://get.helm.sh/${TARBALL}" -o "$DIR/$TARBALL"
+        curl -fsSL "https://get.helm.sh/${TARBALL}.sha256sum" -o "$DIR/${TARBALL}.sha256sum"
+        (cd "$DIR" && sha256sum -c "${TARBALL}.sha256sum")
+        tar -xzf "$DIR/$TARBALL" -C "$DIR"
+        echo "$DIR/linux-amd64" >> "$GITHUB_PATH"
+    - name: Install signing key
+      if: ${{ inputs.SIGNER_KEY != '' }}
+      shell: bash
+      env:
+        SIGNER_KEY: ${{ inputs.SIGNER_KEY }}
+        SIGNER_KEY_ID: ${{ inputs.SIGNER_KEY_ID }}
+        SIGNER_KEY_PASSPHRASE: ${{ inputs.SIGNER_KEY_PASSPHRASE }}
+      run: |
+        if [[ -z "$SIGNER_KEY_ID" || -z "$SIGNER_KEY_PASSPHRASE" ]]; then
+          echo "::error::SIGNER_KEY is set but SIGNER_KEY_ID and/or SIGNER_KEY_PASSPHRASE is empty; both are required to sign the chart."
+          exit 1
+        fi
+        export GNUPGHOME=$(mktemp -d)
+        chmod 700 "$GNUPGHOME"
+        echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+        KEY_FILE=$(mktemp); DECODED_KEY=$(mktemp)
+        chmod 600 "$KEY_FILE" "$DECODED_KEY"
+        trap 'rm -f "$KEY_FILE" "$DECODED_KEY"' EXIT
+        echo "$SIGNER_KEY" > "$KEY_FILE"
+        base64 -d "$KEY_FILE" > "$DECODED_KEY"
+        printf '%s\n' "$SIGNER_KEY_PASSPHRASE" | gpg --batch --pinentry-mode loopback --passphrase-fd 0 --import "$DECODED_KEY"
+        # Helm's openpgp needs a LEGACY secret keyring (GnuPG v2 stores .kbx by default)
+        SECRING="$GNUPGHOME/secring.gpg"
+        printf '%s\n' "$SIGNER_KEY_PASSPHRASE" | gpg --batch --pinentry-mode loopback --passphrase-fd 0 --export-secret-keys "$SIGNER_KEY_ID" > "$SECRING"
+        echo "SECRING=$SECRING" >> "$GITHUB_ENV"
+        # helm --key matches a substring of the key UID, not the fingerprint
+        KEY_NAME=$(gpg --list-keys --with-colons "$SIGNER_KEY_ID" | awk -F: '$1=="uid"{print $10; exit}')
+        echo "KEY_NAME=$KEY_NAME" >> "$GITHUB_ENV"
     - name: Publish Helm chart
       id: release
-      uses: tylerauerbeck/helm-gh-pages@3227331903e1755121f8da35f2f4819d731449a5  # main as of 2026-03-13
-      with:
-        token: ${{ steps.app-token.outputs.token }}
-        charts_dir: ${{ inputs.CHARTS_DIR }}
-        index_dir: ${{ inputs.INDEX_DIR }}
-        charts_url: https://imio.github.io/helm-charts/
-        owner: IMIO
-        repository: helm-charts
-        branch: gh-pages
-        target_dir: ${{ inputs.TARGET_DIR }}
-        helm_version: ${{ inputs.HELM_VERSION }}
-        dependencies: ${{ inputs.HELM_DEPENDENCIES }}
+      shell: bash
+      env:
+        TOKEN: ${{ steps.app-token.outputs.token }}
+        CHARTS_DIR: ${{ inputs.CHARTS_DIR }}
+        INDEX_DIR: ${{ inputs.INDEX_DIR }}
+        TARGET_DIR: ${{ inputs.TARGET_DIR }}
+        HELM_DEPENDENCIES: ${{ inputs.HELM_DEPENDENCIES }}
+        SIGNER_KEY: ${{ inputs.SIGNER_KEY }}
+        SIGNER_KEY_PASSPHRASE: ${{ inputs.SIGNER_KEY_PASSPHRASE }}
+        OWNER: IMIO
+        REPOSITORY: helm-charts
+        BRANCH: gh-pages
+        CHARTS_URL: https://imio.github.io/helm-charts/
+      run: |
+        set -euo pipefail
+        TMP=""; WORK=""; PASS=""
+        trap 'rm -rf "$TMP" "$WORK" "$PASS"' EXIT
+        # locate charts (mirror helm-gh-pages)
+        CHARTS=()
+        if [[ "$CHARTS_DIR" == "." ]]; then CHARTS+=("."); else
+          for d in $(find "$CHARTS_DIR" -mindepth 1 -maxdepth 1 -type d); do
+            [[ -f "$d/Chart.yaml" ]] && CHARTS+=("$d"); done
+        fi
+        # URL derivation (mirror helm-gh-pages; path.Join later collapses the //)
+        if [[ "$TARGET_DIR" != "." && "$TARGET_DIR" != "docs" ]]; then CHARTS_URL="${CHARTS_URL}/${TARGET_DIR}"; fi
+        # optional helm repo deps: "name,url;name2,url2" or name,user,pass,url
+        if [[ -n "$HELM_DEPENDENCIES" ]]; then
+          IFS=';' read -ra DEPS <<< "$HELM_DEPENDENCIES"
+          for r in "${DEPS[@]}"; do
+            if [[ "$(awk -F',' '{print NF}' <<<"$r")" -gt 2 ]]; then
+              helm repo add "$(cut -f1 -d, <<<"$r")" --username "$(cut -f2 -d, <<<"$r")" --password "$(cut -f3 -d, <<<"$r")" "$(cut -f4 -d, <<<"$r")"
+            else
+              helm repo add "$(cut -f1 -d, <<<"$r")" "$(cut -f2 -d, <<<"$r")"
+            fi
+          done
+        fi
+        for c in "${CHARTS[@]}"; do helm dependency update "$c"; done
+        helm lint "${CHARTS[@]}"
+        # package (+ sign if a key was imported)
+        TMP=$(mktemp -d)
+        SIGN_ARGS=()
+        if [[ -n "$SIGNER_KEY" ]]; then
+          PASS=$(mktemp); chmod 600 "$PASS"
+          printf '%s' "$SIGNER_KEY_PASSPHRASE" > "$PASS"
+          SIGN_ARGS=(--sign --key "$KEY_NAME" --keyring "$SECRING" --passphrase-file "$PASS")
+        fi
+        helm package "${CHARTS[@]}" --destination "$TMP" "${SIGN_ARGS[@]}"
+        # publish to gh-pages (mirror helm-gh-pages upload; add .prov)
+        WORK=$(mktemp -d)
+        git clone "https://x-access-token:${TOKEN}@github.com/${OWNER}/${REPOSITORY}.git" "$WORK/repo"
+        cd "$WORK/repo"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git checkout "$BRANCH"
+        CHART_LIST=$(cd "$TMP" && ls *.tgz | xargs)
+        mkdir -p "$TARGET_DIR"
+        if [[ -f "$INDEX_DIR/index.yaml" ]]; then
+          helm repo index "$TMP" --url "$CHARTS_URL" --merge "$INDEX_DIR/index.yaml"
+          mv -f "$TMP"/*.tgz "$TARGET_DIR"/
+          mv -f "$TMP"/index.yaml "$INDEX_DIR/index.yaml"
+        else
+          helm repo index "$TMP" --url "$CHARTS_URL"
+          mv -f "$TMP"/*.tgz "$TARGET_DIR"/
+          mv -f "$TMP"/index.yaml "$INDEX_DIR/index.yaml"
+        fi
+        if ls "$TMP"/*.tgz.prov >/dev/null 2>&1; then mv -f "$TMP"/*.tgz.prov "$TARGET_DIR"/; fi
+        git add "$TARGET_DIR" "$INDEX_DIR/index.yaml"
+        git commit -m "Publish $CHART_LIST"
+        git push origin "$BRANCH"
+    - name: Cleanup GPG home
+      if: ${{ always() && inputs.SIGNER_KEY != '' }}
+      shell: bash
+      run: rm -rf "$GNUPGHOME"
     - name: Notify on Mattermost
       if: always()
       uses: imio/gha/mattermost-notify@v7
@@ -83,3 +197,4 @@ runs:
           **Repository:** ${{ github.repository }}
           **Version:** ${{ env.VERSION }}
           **Branch:** ${{ github.ref_name }}
+          **Signed:** ${{ inputs.SIGNER_KEY != '' && 'yes' || 'no' }}
