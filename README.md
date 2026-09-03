@@ -54,6 +54,9 @@ This repository hosts a set of github actions we use to deploy our apps.
     - [claude-agent](#claude-agent)
       - [Inputs](#inputs-14)
       - [Example of usage](#example-of-usage-15)
+    - [setup-git-auth](#setup-git-auth)
+      - [Inputs](#inputs-15)
+      - [Example of usage](#example-of-usage-16)
   - [Contribute](#contribute)
     - [Release](#release)
 
@@ -233,11 +236,15 @@ Test a Plone package and optionally notify via a mattermost webhook
 | BUILDOUT_CONFIG_FILE          |    yes   | string | "buildout.cfg"     | Buildout config file |
 | BUILDOUT_OPTIONS              |    no    | string |                    | Options to pass to buildout |
 | CACHE_KEY                     |    no    | string |                    | key to use in actions/cache |
+| GITHUB_TOKEN                  |    no    | string |                    | Token used to authenticate git access to github.com for mr.developer sources |
 | INSTALL_DEPENDENCIES_COMMANDS |    no    | string |                    | Install dependencies commands (one per line) |
 | MATTERMOST_WEBHOOK_URL        |    no    | string |                    | Webhook URL to send notifications on Mattermost |
 | PYTHON_VERSION                |    yes   | string | "3.13"             | Python version to use |
 | TEST_COMMAND                  |    yes   | string | "bin/test"         | Test command to run |
 | UV_VERSION                    |    yes   | string | "0.7.13"           | uv version to use |
+
+> [!TIP]
+> Pass `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` when your buildout uses `mr.developer` sources. Without it those checkouts clone anonymously and GitHub intermittently answers with a `401`, which surfaces as `fatal: could not read Username for 'https://github.com': No such device or address`. See [`setup-git-auth`](#setup-git-auth), which this action calls internally.
 
 #### Example of usage
 
@@ -668,6 +675,47 @@ jobs:
 ```
 
 For Trivy scan post-processing, use the dedicated [`trivy-claude-analysis`](#trivy-claude-analysis) action instead of calling `claude-agent` directly — it keeps the Trivy-specific prompt versioned inside the iMio actions.
+
+---
+### setup-git-auth
+
+Configure authenticated git access to `github.com` for the whole job, then tear it down again.
+
+`actions/checkout` persists credentials only in the checked-out repository's own `.git/config`. Any tool that clones *another* repository later in the job — `mr.developer`, git submodules, `go get`, `pip install git+...` — therefore clones anonymously. GitHub intermittently answers anonymous HTTPS git requests with a `401`; git then falls back to prompting for a username, there is no terminal on the runner, and the clone dies with:
+
+```
+fatal: GitHub is temporarily limiting some unauthenticated downloads to protect the stability of the platform. Please retry later or authenticate.
+```
+
+This action configures `http.https://github.com/.extraheader` (the same mechanism `actions/checkout` uses) so those clones are authenticated, which also raises the rate limit and makes private sources work. Sources declared with an SSH URL are rewritten to authenticated HTTPS.
+
+Composite actions cannot declare a `post:` cleanup step, so teardown is an explicit second call with `MODE: cleanup`.
+
+#### Inputs
+
+| name                   | required | type   | default         | description |
+| ---------------------- | -------- | ------ | --------------- | ----------- |
+| MODE                   |    yes   | string | `"setup"`       | `setup` to configure credentials, `cleanup` to remove them |
+| GITHUB_TOKEN           |    no    | string |                 | Token used to authenticate git access to github.com. Required when `MODE` is `setup` |
+
+#### Example of usage
+
+```yaml
+steps:
+  - uses: actions/checkout@v4
+  - uses: imio/gha/setup-git-auth@v8
+    with:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ... steps that clone other repositories ...
+
+  - uses: imio/gha/setup-git-auth@v8
+    if: always()
+    with:
+      MODE: cleanup
+```
+
+`plone-package-test-notify` calls this action internally when its `GITHUB_TOKEN` input is set.
 
 ## Contribute
 

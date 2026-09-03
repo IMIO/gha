@@ -1,0 +1,47 @@
+name: Setup git auth
+description: Configure authenticated git access to github.com for the whole job, and tear it down again
+inputs:
+  MODE:
+    description: 'setup to configure credentials, cleanup to remove them'
+    required: true
+    default: "setup"
+  GITHUB_TOKEN:
+    description: 'Token used to authenticate git access to github.com. Required when MODE is setup'
+    required: false
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      env:
+        MODE: ${{ inputs.MODE }}
+        GH_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+      shell: bash
+      run: |
+        if [[ "$MODE" != "setup" && "$MODE" != "cleanup" ]]; then
+          echo "::error::MODE must be 'setup' or 'cleanup', got '$MODE'"
+          exit 1
+        fi
+        if [[ "$MODE" == "setup" && -z "$GH_TOKEN" ]]; then
+          echo "::error::GITHUB_TOKEN is required when MODE is 'setup'"
+          exit 1
+        fi
+    - name: Configure authenticated git access to github.com
+      if: ${{ inputs.MODE == 'setup' }}
+      env:
+        GH_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+      shell: bash
+      run: |
+        echo "::add-mask::$GH_TOKEN"
+        AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+        echo "::add-mask::$AUTH"
+        git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic $AUTH"
+        git config --global url."https://github.com/".insteadOf "git@github.com:"
+        git config --global --add url."https://github.com/".insteadOf "ssh://git@github.com/"
+        echo "Authenticated git access to github.com is configured"
+    - name: Remove authenticated git access
+      if: ${{ inputs.MODE == 'cleanup' }}
+      shell: bash
+      run: |
+        git config --global --unset-all http.https://github.com/.extraheader || true
+        git config --global --unset-all url."https://github.com/".insteadOf || true
+        echo "Authenticated git access to github.com is removed"

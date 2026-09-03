@@ -1,5 +1,14 @@
 # Changelog
 
+## [v8.2.0] - 2026-09-03
+### Added
+- setup-git-auth
+  - New action. Configures authenticated git access to `github.com` for the whole job via `http.https://github.com/.extraheader` (the same mechanism `actions/checkout` uses), so tools that clone *other* repositories mid-job (`mr.developer`, git submodules, `go get`, `pip install git+...`) no longer clone anonymously. Sources declared with an SSH URL are rewritten to authenticated HTTPS through tokenless `insteadOf` entries
+  - `MODE` input (default `setup`) — `cleanup` removes the credentials again. Composite actions cannot declare a `post:` step, so teardown is an explicit second call, typically with `if: always()`
+  - `GITHUB_TOKEN` input — required when `MODE` is `setup`. Both the token and its base64 form are passed to `::add-mask::`, since a composite-action input is auto-masked only when the caller passed an actual secret
+- plone-package-test-notify
+  - New optional `GITHUB_TOKEN` input — when set, the action calls `setup-git-auth` right after the checkout and cleans up at the end, so `mr.developer` source checkouts are authenticated instead of anonymous. Fixes intermittent `fatal: could not read Username for 'https://github.com': No such device or address` buildout failures caused by GitHub answering anonymous clones with a `401`, and allows private sources. Pass `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}`; leaving it unset keeps the previous anonymous behaviour
+
 ## [v8.1.0] - 2026-07-15
 ### Added
 - helm-release-notify

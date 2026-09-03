@@ -16,6 +16,9 @@ inputs:
   CACHE_KEY:
     description: 'Cache key'
     required: false
+  GITHUB_TOKEN:
+    description: 'Token used to authenticate git access to github.com (mr.developer sources). If not provided, clones stay anonymous and may intermittently fail with a 401'
+    required: false
   INSTALL_DEPENDENCIES_COMMANDS:
     description: 'Commands to install dependencies'
     required: false
@@ -47,6 +50,11 @@ runs:
       shell: bash
     - name: Checkout
       uses: actions/checkout@v4
+    - name: Setup git auth
+      if: ${{ inputs.GITHUB_TOKEN != '' }}
+      uses: IMIO/gha/setup-git-auth@DEVOPS-427
+      with:
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
     - name: Cache eggs
       if: ${{ inputs.CACHE_KEY != '' }}
       uses: actions/cache@v4
@@ -90,7 +98,7 @@ runs:
         eval "$TEST_COMMAND"
     - name: Notify on Mattermost
       if: always()
-      uses: imio/gha/mattermost-notify@v7
+      uses: IMIO/gha/mattermost-notify@v7
       with:
         MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
         STATUS: ${{ steps.test.outcome == 'success' && 'success' || 'failure' }}
@@ -101,3 +109,8 @@ runs:
           **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
           **Test command:** ${{ inputs.TEST_COMMAND }}
           **Python version:** ${{ inputs.PYTHON_VERSION }}
+    - name: Cleanup git auth
+      if: ${{ always() && inputs.GITHUB_TOKEN != '' }}
+      uses: IMIO/gha/setup-git-auth@DEVOPS-427
+      with:
+        MODE: cleanup

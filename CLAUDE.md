@@ -29,11 +29,16 @@ Each action lives in its own top-level directory containing a single `action.yml
 | `plone-theme-build-push-notify` | Upload a Plone theme to a site, notify on Mattermost |
 | `repository-dispatch-notify` | Trigger a repository dispatch event, optionally notify on Mattermost |
 | `rundeck-notify` | Call a Rundeck job and notify on Mattermost |
+| `setup-git-auth` | Configure authenticated git access to github.com for the job, and tear it down |
 | `tag-notify` | Re-tag a Docker image in a registry and notify on Mattermost |
 
 ## Cross-action dependencies
 
-`plone-theme-build-push-notify` and `repository-dispatch-notify` call `mattermost-notify` internally. When modifying `mattermost-notify` inputs, check both callers.
+Most `*-notify` actions call `mattermost-notify` internally (`build-push-notify`, `code-analysis-notify`, `deb-build-push-notify`, `helm-release-notify`, `helm-test-notify`, `plone-package-test-notify`, `plone-theme-build-push-notify`, `repository-dispatch-notify`, `rundeck-notify`, `tag-notify`, `trivy-sbom-notify`, `trivy-scan-notify`). When modifying `mattermost-notify` inputs, check all of them.
+
+`plone-package-test-notify` calls `setup-git-auth` (twice: `setup` before the buildout, `cleanup` at the end). `trivy-claude-analysis` calls `claude-agent`.
+
+Internal `uses:` pins are still on `@v7` except `setup-git-auth`, which only exists from `v8.2.0` and so is pinned `@v8`.
 
 ## Release process
 
