@@ -52,7 +52,7 @@ runs:
       uses: actions/checkout@v4
     - name: Setup git auth
       if: ${{ inputs.GITHUB_TOKEN != '' }}
-      uses: IMIO/gha/setup-git-auth@DEVOPS-427
+      uses: IMIO/gha/setup-git-auth@v8
       with:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
     - name: Cache eggs
@@ -96,9 +96,14 @@ runs:
       shell: bash
       run: |
         eval "$TEST_COMMAND"
+    - name: Cleanup git auth
+      if: ${{ always() && inputs.GITHUB_TOKEN != '' }}
+      uses: IMIO/gha/setup-git-auth@v8
+      with:
+        MODE: cleanup
     - name: Notify on Mattermost
       if: always()
-      uses: IMIO/gha/mattermost-notify@v7
+      uses: IMIO/gha/mattermost-notify@v8
       with:
         MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
         STATUS: ${{ steps.test.outcome == 'success' && 'success' || 'failure' }}
@@ -109,8 +114,3 @@ runs:
           **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
           **Test command:** ${{ inputs.TEST_COMMAND }}
           **Python version:** ${{ inputs.PYTHON_VERSION }}
-    - name: Cleanup git auth
-      if: ${{ always() && inputs.GITHUB_TOKEN != '' }}
-      uses: IMIO/gha/setup-git-auth@DEVOPS-427
-      with:
-        MODE: cleanup
