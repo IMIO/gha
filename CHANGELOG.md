@@ -1,5 +1,11 @@
 # Changelog
 
+## [v4.2.0] - 2026-09-16
+### Added
+- plone-package-test-notify
+  - GITHUB_TOKEN input, used to authenticate git access to github.com for mr.developer sources.
+    setup-git-auth runs after the internal checkout, so callers no longer need to wrap the action.
+
 ## [v4.1] - 2024-10-22
 ### Added
 - repository-dispatch-notify

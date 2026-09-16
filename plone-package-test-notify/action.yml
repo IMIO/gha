@@ -8,6 +8,9 @@ inputs:
   CACHE_KEY:
     description: 'Cache key'
     required: false
+  GITHUB_TOKEN:
+    description: 'Token used to authenticate git access to github.com (mr.developer sources). If not provided, clones stay anonymous and may intermittently fail with a 401'
+    required: false
   INSTALL_DEPENDENCIES_COMMANDS:
     description: 'Commands to install dependencies'
     required: false
@@ -34,6 +37,11 @@ runs:
       shell: bash
     - name: Checkout
       uses: actions/checkout@v4
+    - name: Setup git auth
+      if: ${{ inputs.GITHUB_TOKEN != '' }}
+      uses: IMIO/gha/setup-git-auth@v8
+      with:
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
     - name: Cache eggs
       if: ${{ inputs.CACHE_KEY != '' }}
       uses: actions/cache@v4
@@ -65,6 +73,11 @@ runs:
       shell: bash
       run: |
         ${{ inputs.TEST_COMMAND }}
+    - name: Cleanup git auth
+      if: ${{ always() && inputs.GITHUB_TOKEN != '' }}
+      uses: IMIO/gha/setup-git-auth@v8
+      with:
+        MODE: cleanup
     - name : Send notification on Mattermost
       if: ${{ inputs.MATTERMOST_WEBHOOK_URL != '' }}
       run: |
