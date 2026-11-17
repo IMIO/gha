@@ -1,0 +1,23 @@
+[project]
+name = "imio-plone-image-test"
+version = "1.0.0"
+description = "Smoke tests for a Plone Docker image: boot it with docker compose and check that the site answers"
+requires-python = ">=3.10"
+dependencies = [
+    "pytest>=8",
+    "requests>=2.31",
+]
+
+[project.scripts]
+plone-image-test = "imio_plone_image_test.cli:main"
+
+[project.entry-points.pytest11]
+plone_image_test = "imio_plone_image_test.plugin"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+# Rebuild when the checks change, not only pyproject.toml (uv's default): runners keep their uv cache.
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.py" }]
