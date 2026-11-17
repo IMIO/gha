@@ -1,6 +1,6 @@
 # Changelog
 
-## [v8.3.0] - Unreleased
+## [v8.3.0] - 2026-11-17
 ### Added
 - plone-image-test-notify
   - New action. Builds a Plone image with the caller's compose file, boots it (`docker compose up --wait`) and runs smoke tests over HTTP: plone.observability health probes, `/ok`, site root, expected add-ons installed, no pending upgrade step, site root scripts and stylesheets, control panels, Site Setup, and no error in the instance log (with an allowlist). Repository tests in `TESTS_PATH` run in the same session and reuse its fixtures. The checks are a Python package next to `action.yml`, runnable locally with `uvx`. The runner only needs Docker: the action installs the Compose plugin. WEB-3639
