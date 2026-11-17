@@ -57,6 +57,9 @@ This repository hosts a set of github actions we use to deploy our apps.
     - [setup-git-auth](#setup-git-auth)
       - [Inputs](#inputs-15)
       - [Example of usage](#example-of-usage-16)
+    - [plone-image-test-notify](#plone-image-test-notify)
+      - [Inputs](#inputs-16)
+      - [Example of usage](#example-of-usage-17)
   - [Contribute](#contribute)
     - [Release](#release)
 
@@ -716,6 +719,59 @@ steps:
 ```
 
 `plone-package-test-notify` calls this action internally when its `GITHUB_TOKEN` input is set.
+
+---
+
+### plone-image-test-notify
+
+Build a Plone Docker image, boot it with `docker compose`, run smoke tests over HTTP and optionally notify via a mattermost webhook. Use it after a package update, before the image is pushed.
+
+The caller's compose file builds the image and starts it with whatever it needs (database, Solr…). It publishes the container port `8080`, and `8081` for the [plone.observability](https://github.com/plone/plone.observability) health probes, on random host ports (`"127.0.0.1::8080"`), and creates the site at startup (e.g. `collective.big.bang`). The action then runs, in one pytest session:
+
+- the generic checks: health probes `/live` `/ready` `/startup` (skipped without `8081`), `/ok`, site root as anonymous, `ADDONS` installed, no add-on with a pending upgrade step, every same-origin script and stylesheet of the site root, every control panel (`@controlpanels`) and the Site Setup page, and no `ERROR` or traceback in the instance log (`LOG_ALLOWLIST` excepted);
+- the repository tests in `TESTS_PATH`, which can use the plugin fixtures `site_url`, `zope_url`, `admin` (a `requests.Session` logged in as admin) and `compose`.
+
+The runner only needs Docker: the action installs the Compose plugin (pinned version) with `docker/setup-compose-action`.
+
+The checks are a small Python package next to `action.yml`, so the same run works locally:
+
+```bash
+uvx --from "git+https://github.com/IMIO/gha@v8#subdirectory=plone-image-test-notify" plone-image-test \
+  --compose-file tests/docker-compose.test.yml --addons my.policy -v tests
+```
+
+#### Inputs
+
+| name                   | required | type   | default                           | description |
+| ---------------------- | -------- | ------ | --------------------------------- | ----------- |
+| ADDONS                 |    no    | string |                                   | Comma-separated add-on ids that must be installed in the site |
+| ADMIN                  |    no    | string | "admin:admin"                     | Admin credentials of the site under test, as user:password |
+| COMPOSE_FILE           |    no    | string | "tests/docker-compose.test.yml"   | Compose file of the stack under test |
+| LOG_ALLOWLIST          |    no    | string |                                   | File of regexes, one per line: matching log records are not reported as errors |
+| MATTERMOST_WEBHOOK_URL |    no    | string |                                   | Webhook URL to send notifications on Mattermost |
+| REGISTRY_URL           |    no    | string |                                   | Registry to log in to before building, when the base image is private |
+| REGISTRY_USERNAME      |    no    | string |                                   | Username to log in to the registry |
+| REGISTRY_PASSWORD      |    no    | string |                                   | Password to log in to the registry |
+| SERVICE                |    no    | string | "instance"                        | Compose service running Plone |
+| SITE_ID                |    no    | string | "Plone"                           | Id of the Plone site created at startup |
+| TESTS_PATH             |    no    | string | "tests"                           | Directory of repository-specific tests, run after the generic checks. Empty to run only the generic checks |
+| WAIT_TIMEOUT           |    no    | string | "600"                             | Seconds to wait for the stack to become healthy |
+
+#### Example of usage
+
+```yaml
+steps:
+  - uses: imio/gha/plone-image-test-notify@v8
+    with:
+      ADDONS: imio.smartweb.policy
+      LOG_ALLOWLIST: tests/log_allowlist.txt
+      REGISTRY_URL: ${{ secrets.HARBOR_URL }}
+      REGISTRY_USERNAME: ${{ secrets.HARBOR_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.HARBOR_PASSWORD }}
+      MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+```
+
+Most callers go through the reusable workflow [`plone-image-test.yml`](https://github.com/IMIO/gha-workflows#plone-image-testyml) instead.
 
 ## Contribute
 

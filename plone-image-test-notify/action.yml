@@ -1,0 +1,97 @@
+name: Test a Plone image
+description: Build a Plone image, boot it with docker compose, run smoke tests and notify on Mattermost
+inputs:
+  ADDONS:
+    description: 'Comma-separated add-on ids that must be installed in the site'
+    required: false
+    default: ''
+  ADMIN:
+    description: 'Admin credentials of the site under test, as user:password'
+    required: false
+    default: 'admin:admin'
+  COMPOSE_FILE:
+    description: 'Compose file of the stack under test. It builds the image and publishes container ports 8080 (and 8081 for plone.observability health probes)'
+    required: false
+    default: 'tests/docker-compose.test.yml'
+  LOG_ALLOWLIST:
+    description: 'File of regexes, one per line: matching log records are not reported as errors'
+    required: false
+    default: ''
+  MATTERMOST_WEBHOOK_URL:
+    description: 'Webhook URL to send notifications on Mattermost, if not provided, notifications will not be sent'
+    required: false
+  REGISTRY_URL:
+    description: 'Registry to log in to before building, when the base image is private'
+    required: false
+    default: ''
+  REGISTRY_USERNAME:
+    description: 'Username to log in to the registry'
+    required: false
+  REGISTRY_PASSWORD:
+    description: 'Password to log in to the registry'
+    required: false
+  SERVICE:
+    description: 'Compose service running Plone'
+    required: false
+    default: 'instance'
+  SITE_ID:
+    description: 'Id of the Plone site created at startup'
+    required: false
+    default: 'Plone'
+  TESTS_PATH:
+    description: 'Directory of repository-specific tests, run after the generic checks. Empty to run only the generic checks'
+    required: false
+    default: 'tests'
+  WAIT_TIMEOUT:
+    description: 'Seconds to wait for the stack to become healthy'
+    required: false
+    default: '600'
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - name: Install uv
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+    - name: Set up Docker Compose
+      uses: docker/setup-compose-action@54042514f505b273907334ae2b9cdbb9a0213c1a  # v2.4.0
+      with:
+        version: v5.7.1
+    - name: Login to registry
+      if: ${{ inputs.REGISTRY_URL != '' }}
+      uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550  # v4.8.0
+      with:
+        registry: ${{ inputs.REGISTRY_URL }}
+        username: ${{ inputs.REGISTRY_USERNAME }}
+        password: ${{ inputs.REGISTRY_PASSWORD }}
+    - name: Run tests
+      id: test
+      env:
+        ADDONS: ${{ inputs.ADDONS }}
+        ADMIN: ${{ inputs.ADMIN }}
+        COMPOSE_FILE: ${{ inputs.COMPOSE_FILE }}
+        LOG_ALLOWLIST: ${{ inputs.LOG_ALLOWLIST }}
+        SERVICE: ${{ inputs.SERVICE }}
+        SITE_ID: ${{ inputs.SITE_ID }}
+        TESTS_PATH: ${{ inputs.TESTS_PATH }}
+        WAIT_TIMEOUT: ${{ inputs.WAIT_TIMEOUT }}
+      shell: bash
+      run: |
+        args=(--compose-file "$COMPOSE_FILE" --service "$SERVICE" --site-id "$SITE_ID")
+        args+=(--admin "$ADMIN" --wait-timeout "$WAIT_TIMEOUT" -v)
+        if [ -n "$ADDONS" ]; then args+=(--addons "$ADDONS"); fi
+        if [ -n "$LOG_ALLOWLIST" ]; then args+=(--log-allowlist "$LOG_ALLOWLIST"); fi
+        if [ -n "$TESTS_PATH" ]; then args+=("$TESTS_PATH"); fi
+        uvx --from "$GITHUB_ACTION_PATH" plone-image-test "${args[@]}"
+    - name: Notify on Mattermost
+      if: always()
+      uses: IMIO/gha/mattermost-notify@v8
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ inputs.MATTERMOST_WEBHOOK_URL }}
+        STATUS: ${{ steps.test.outcome == 'success' && 'success' || 'failure' }}
+        TITLE: "Plone Image Test"
+        BODY: |
+          **Repository:** [${{ github.repository }}](${{ github.server_url }}/${{ github.repository }})
+          **Branch:** ${{ github.ref_name }}
+          **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+          **Compose file:** ${{ inputs.COMPOSE_FILE }}

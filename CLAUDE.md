@@ -13,6 +13,8 @@ Each action lives in its own top-level directory containing a single `action.yml
 
 `event.json` at the root is used for local testing with `act`.
 
+Exception: `plone-image-test-notify/` also holds a small Python package (`pyproject.toml`, `src/`), the pytest checks it runs. Callers can run them locally with `uvx --from "git+https://github.com/IMIO/gha@<ref>#subdirectory=plone-image-test-notify" plone-image-test`.
+
 ## Actions inventory
 
 | Directory | Description |
@@ -26,6 +28,7 @@ Each action lives in its own top-level directory containing a single `action.yml
 | `k8s-update-tag` | Update a component tag in a Kubernetes values file and push the commit |
 | `mattermost-notify` | Send a notification to a Mattermost webhook (used by other actions) |
 | `plone-package-test-notify` | Run Plone package tests (via buildout/uv) and notify on Mattermost |
+| `plone-image-test-notify` | Build a Plone image, boot it with docker compose, run smoke tests, notify on Mattermost |
 | `plone-theme-build-push-notify` | Upload a Plone theme to a site, notify on Mattermost |
 | `repository-dispatch-notify` | Trigger a repository dispatch event, optionally notify on Mattermost |
 | `rundeck-notify` | Call a Rundeck job and notify on Mattermost |
@@ -34,7 +37,7 @@ Each action lives in its own top-level directory containing a single `action.yml
 
 ## Cross-action dependencies
 
-Most `*-notify` actions call `mattermost-notify` internally (`build-push-notify`, `code-analysis-notify`, `deb-build-push-notify`, `helm-release-notify`, `helm-test-notify`, `plone-package-test-notify`, `plone-theme-build-push-notify`, `repository-dispatch-notify`, `rundeck-notify`, `tag-notify`, `trivy-sbom-notify`, `trivy-scan-notify`). When modifying `mattermost-notify` inputs, check all of them.
+Most `*-notify` actions call `mattermost-notify` internally (`build-push-notify`, `code-analysis-notify`, `deb-build-push-notify`, `helm-release-notify`, `helm-test-notify`, `plone-image-test-notify`, `plone-package-test-notify`, `plone-theme-build-push-notify`, `repository-dispatch-notify`, `rundeck-notify`, `tag-notify`, `trivy-sbom-notify`, `trivy-scan-notify`). When modifying `mattermost-notify` inputs, check all of them.
 
 `plone-package-test-notify` calls `setup-git-auth` (twice: `setup` before the buildout, `cleanup` at the end). `trivy-claude-analysis` calls `claude-agent`.
 
