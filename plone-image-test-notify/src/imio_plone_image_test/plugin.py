@@ -105,7 +105,10 @@ def compose(request):
         with capture.global_and_fixture_disabled():
             print(f"\n----- {stack.service} logs -----\n{stack.logs()}")
         stack.down()
-        pytest.exit("The stack did not become healthy, see the logs above", 1)
+        pytest.exit(
+            "docker compose up failed (build, start or healthcheck), see the output above",
+            1,
+        )
     try:
         yield stack
     finally:

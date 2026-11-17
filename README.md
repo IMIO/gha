@@ -731,6 +731,8 @@ The caller's compose file builds the image and starts it with whatever it needs 
 - the generic checks: health probes `/live` `/ready` `/startup` (skipped without `8081`), `/ok`, site root as anonymous, `ADDONS` installed, no add-on with a pending upgrade step, every same-origin script and stylesheet of the site root, every control panel (`@controlpanels`) and the Site Setup page, and no `ERROR` or traceback in the instance log (`LOG_ALLOWLIST` excepted);
 - the repository tests in `TESTS_PATH`, which can use the plugin fixtures `site_url`, `zope_url`, `admin` (a `requests.Session` logged in as admin) and `compose`.
 
+The runner only needs Docker: the action installs the Compose plugin (pinned version) with `docker/setup-compose-action`.
+
 The checks are a small Python package next to `action.yml`, so the same run works locally:
 
 ```bash
