@@ -1,5 +1,10 @@
 # Changelog
 
+## [v8.4.0] - 2026-11-19
+### Added
+- plone-image-test-notify
+  - New optional `IMAGE_NAME` and `IMAGE_TAG` inputs (and `--image` option of `plone-image-test`): test `REGISTRY_URL/IMAGE_NAME:IMAGE_TAG`, pulled from the registry, instead of building the image with the compose file. A workflow can then build and push the image once, test it, and retag it with `tag-notify`, so the image deployed is the one tested. Empty keeps the build. WEB-3639
+
 ## [v8.3.0] - 2026-11-17
 ### Added
 - plone-image-test-notify

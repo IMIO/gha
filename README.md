@@ -726,6 +726,8 @@ steps:
 
 Build a Plone Docker image, boot it with `docker compose`, run smoke tests over HTTP and optionally notify via a mattermost webhook. Use it after a package update, before the image is pushed.
 
+To test an image already pushed instead (build once, test it, then retag it with [`tag-notify`](#tag-notify)), set `IMAGE_NAME` and `IMAGE_TAG`: the action pulls `REGISTRY_URL/IMAGE_NAME:IMAGE_TAG` and runs it as the `SERVICE` of the compose file, without building.
+
 The caller's compose file builds the image and starts it with whatever it needs (database, Solr…). It publishes the container port `8080`, and `8081` for the [plone.observability](https://github.com/plone/plone.observability) health probes, on random host ports (`"127.0.0.1::8080"`), and creates the site at startup (e.g. `collective.big.bang`). The action then runs, in one pytest session:
 
 - the generic checks: health probes `/live` `/ready` `/startup` (skipped without `8081`), `/ok`, site root as anonymous, `ADDONS` installed, no add-on with a pending upgrade step, every same-origin script and stylesheet of the site root, every control panel (`@controlpanels`) and the Site Setup page, and no `ERROR` or traceback in the instance log (`LOG_ALLOWLIST` excepted);
@@ -747,9 +749,11 @@ uvx --from "git+https://github.com/IMIO/gha@v8#subdirectory=plone-image-test-not
 | ADDONS                 |    no    | string |                                   | Comma-separated add-on ids that must be installed in the site |
 | ADMIN                  |    no    | string | "admin:admin"                     | Admin credentials of the site under test, as user:password |
 | COMPOSE_FILE           |    no    | string | "tests/docker-compose.test.yml"   | Compose file of the stack under test |
+| IMAGE_NAME             |    no    | string |                                   | Image to test instead of building it, relative to `REGISTRY_URL` (e.g. `web/smartweb/mutual`). Empty to build it with the compose file |
+| IMAGE_TAG              |    no    | string |                                   | Tag of `IMAGE_NAME` |
 | LOG_ALLOWLIST          |    no    | string |                                   | File of regexes, one per line: matching log records are not reported as errors |
 | MATTERMOST_WEBHOOK_URL |    no    | string |                                   | Webhook URL to send notifications on Mattermost |
-| REGISTRY_URL           |    no    | string |                                   | Registry to log in to before building, when the base image is private |
+| REGISTRY_URL           |    no    | string |                                   | Registry to log in to: to pull `IMAGE_NAME`, or before building when the base image is private |
 | REGISTRY_USERNAME      |    no    | string |                                   | Username to log in to the registry |
 | REGISTRY_PASSWORD      |    no    | string |                                   | Password to log in to the registry |
 | SERVICE                |    no    | string | "instance"                        | Compose service running Plone |
