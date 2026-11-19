@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import json
 import os
 import pytest
 import re
@@ -22,6 +23,11 @@ def pytest_addoption(parser):
     )
     group.addoption(
         "--service", default="instance", help="compose service running Plone"
+    )
+    group.addoption(
+        "--image",
+        default=None,
+        help="image the service runs, pulled from its registry, instead of building it",
     )
     group.addoption(
         "--site-id", default="Plone", help="id of the Plone site created at startup"
@@ -55,11 +61,13 @@ def pytest_collection_modifyitems(items):
 class Compose:
     """The stack under test, driven through the docker compose CLI."""
 
-    def __init__(self, compose_file, service):
+    def __init__(self, compose_files, service, build):
         project = f"plone-image-test-{os.environ.get('GITHUB_RUN_ID', os.getpid())}"
         self.command = ["docker", "compose", "--project-name", project]
-        self.command += ["--file", compose_file]
+        for compose_file in compose_files:
+            self.command += ["--file", str(compose_file)]
         self.service = service
+        self.build = build
 
     def run(self, *args, check=True):
         return subprocess.run(
@@ -67,9 +75,10 @@ class Compose:
         )
 
     def up(self, timeout):
-        # Not captured: the build can take minutes and its progress should stay visible.
+        # Not captured: the build or pull can take minutes and its progress should stay visible.
+        build = "--build" if self.build else "--no-build"
         subprocess.run(
-            [*self.command, "up", "--detach", "--build", "--wait"]
+            [*self.command, "up", "--detach", build, "--wait"]
             + ["--wait-timeout", str(timeout)],
             check=True,
         )
@@ -94,9 +103,17 @@ class Compose:
 
 
 @pytest.fixture(scope="session")
-def compose(request):
+def compose(request, tmp_path_factory):
     option = request.config.getoption
-    stack = Compose(option("--compose-file"), option("--service"))
+    compose_files = [option("--compose-file")]
+    image = option("--image")
+    if image:
+        # An override file sets the service's image; JSON is valid YAML.
+        override = tmp_path_factory.mktemp("compose") / "image.yml"
+        settings = {"image": image, "pull_policy": "always"}
+        override.write_text(json.dumps({"services": {option("--service"): settings}}))
+        compose_files.append(override)
+    stack = Compose(compose_files, option("--service"), build=not image)
     capture = request.config.pluginmanager.getplugin("capturemanager")
     try:
         with capture.global_and_fixture_disabled():
@@ -106,7 +123,7 @@ def compose(request):
             print(f"\n----- {stack.service} logs -----\n{stack.logs()}")
         stack.down()
         pytest.exit(
-            "docker compose up failed (build, start or healthcheck), see the output above",
+            "docker compose up failed (build or pull, start or healthcheck), see the output above",
             1,
         )
     try:

@@ -1,5 +1,5 @@
 name: Test a Plone image
-description: Build a Plone image, boot it with docker compose, run smoke tests and notify on Mattermost
+description: Build or pull a Plone image, boot it with docker compose, run smoke tests and notify on Mattermost
 inputs:
   ADDONS:
     description: 'Comma-separated add-on ids that must be installed in the site'
@@ -10,9 +10,17 @@ inputs:
     required: false
     default: 'admin:admin'
   COMPOSE_FILE:
-    description: 'Compose file of the stack under test. It builds the image and publishes container ports 8080 (and 8081 for plone.observability health probes)'
+    description: 'Compose file of the stack under test. It builds the image (unless IMAGE_NAME is set) and publishes container ports 8080 (and 8081 for plone.observability health probes)'
     required: false
     default: 'tests/docker-compose.test.yml'
+  IMAGE_NAME:
+    description: 'Image to test instead of building it, relative to REGISTRY_URL (e.g. web/smartweb/mutual). Empty to build it with the compose file'
+    required: false
+    default: ''
+  IMAGE_TAG:
+    description: 'Tag of IMAGE_NAME'
+    required: false
+    default: ''
   LOG_ALLOWLIST:
     description: 'File of regexes, one per line: matching log records are not reported as errors'
     required: false
@@ -21,7 +29,7 @@ inputs:
     description: 'Webhook URL to send notifications on Mattermost, if not provided, notifications will not be sent'
     required: false
   REGISTRY_URL:
-    description: 'Registry to log in to before building, when the base image is private'
+    description: 'Registry to log in to: to pull IMAGE_NAME, or before building when the base image is private'
     required: false
     default: ''
   REGISTRY_USERNAME:
@@ -70,7 +78,10 @@ runs:
         ADDONS: ${{ inputs.ADDONS }}
         ADMIN: ${{ inputs.ADMIN }}
         COMPOSE_FILE: ${{ inputs.COMPOSE_FILE }}
+        IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
+        IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
         LOG_ALLOWLIST: ${{ inputs.LOG_ALLOWLIST }}
+        REGISTRY_URL: ${{ inputs.REGISTRY_URL }}
         SERVICE: ${{ inputs.SERVICE }}
         SITE_ID: ${{ inputs.SITE_ID }}
         TESTS_PATH: ${{ inputs.TESTS_PATH }}
@@ -80,6 +91,7 @@ runs:
         args=(--compose-file "$COMPOSE_FILE" --service "$SERVICE" --site-id "$SITE_ID")
         args+=(--admin "$ADMIN" --wait-timeout "$WAIT_TIMEOUT" -v)
         if [ -n "$ADDONS" ]; then args+=(--addons "$ADDONS"); fi
+        if [ -n "$IMAGE_NAME" ]; then args+=(--image "$REGISTRY_URL/$IMAGE_NAME:$IMAGE_TAG"); fi
         if [ -n "$LOG_ALLOWLIST" ]; then args+=(--log-allowlist "$LOG_ALLOWLIST"); fi
         if [ -n "$TESTS_PATH" ]; then args+=("$TESTS_PATH"); fi
         uvx --from "$GITHUB_ACTION_PATH" plone-image-test "${args[@]}"
@@ -95,3 +107,4 @@ runs:
           **Branch:** ${{ github.ref_name }}
           **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
           **Compose file:** ${{ inputs.COMPOSE_FILE }}
+          **Image:** ${{ inputs.IMAGE_NAME && format('{0}:{1}', inputs.IMAGE_NAME, inputs.IMAGE_TAG) || 'built with the compose file' }}
